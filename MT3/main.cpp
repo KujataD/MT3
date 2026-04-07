@@ -3,7 +3,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-const char kWindowTitle[] = "LC1B_07_オオツカ_ダイチ_MT3_00_03";
+const char kWindowTitle[] = "LE2B_07_オオツカ_ダイチ_MT3";
 
 static const int kRowHeight = 20;
 static const int kColumnWidth = 66;
