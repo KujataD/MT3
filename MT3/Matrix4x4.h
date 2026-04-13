@@ -21,5 +21,6 @@ public:
 	static Matrix4x4 MakeRotateXMatrix(float radian);
 	static Matrix4x4 MakeRotateYMatrix(float radian);
 	static Matrix4x4 MakeRotateZMatrix(float radian);
-
+	
+	static Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate);
 };

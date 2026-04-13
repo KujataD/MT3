@@ -2,5 +2,5 @@
   <Configurations>
     <Platform Name="x64" />
   </Configurations>
-  <Project Path="MT3/MT3.vcxproj" />
+  <Project Path="MT3/MT3.vcxproj" Id="27fa1c72-8ea4-45f8-b96a-ade61a2c6b32" />
 </Solution>
