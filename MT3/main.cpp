@@ -17,7 +17,13 @@ struct Triangle {
 	Vector3 vertices[3];
 };
 
+struct AABB {
+	Vector3 min;
+	Vector3 max;
+};
+
 void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
+
 void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label);
 
 void DrawGrid(const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix);
@@ -28,16 +34,21 @@ bool IsCollision(const Sphere& sphere, const Plane& plane);
 
 bool IsCollision(const Segment& line, const Plane& plane);
 
+bool IsCollision(const Segment& segment, const Triangle& triangle);
+
+bool IsCollision(const AABB& aabb1, const AABB& aabb2);
+
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
 void DrawLine(const Segment& line, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
+void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// ライブラリの初期化
-	Novice::Initialize(kWindowTitle, 1280, 720);
+	Novice::Initialize(kWindowTitle, kWindowWidth, kWindowHeight);
 
 	// キー入力結果を受け取る箱
 	char keys[256] = {0};
@@ -63,6 +74,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Segment segment;
 	segment.origin = {-0.5f, 0.5f, 0.8f};
 	segment.diff = {1.0f, 0.5f, 0.8f};
+
+	Triangle triangle;
+	triangle.vertices[0] = {0.0f, 1.0f, 0.0f};
+	triangle.vertices[1] = {1.0f, 0.0f, 0.0f};
+	triangle.vertices[2] = {-1.0f, 0.0f, 0.0f};
+
+	AABB aabb1{
+	    .min{-0.5f, -0.5f, -0.5f}, 
+		.max{0.0f, 0.0f, 0.0f},
+    };
+
+	AABB aabb2{
+	    .min{0.2f, 0.2f, 0.2f},
+	    .max{1.0f, 1.0f, 1.0f},
+	};
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -130,14 +156,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
 		
-		if (IsCollision(segment, plane)) {
+		if (IsCollision(segment, triangle)) {
 			DrawLine(segment, viewProjectionMatrix, viewportMatrix, RED);
 		} else {
 			DrawLine(segment, viewProjectionMatrix, viewportMatrix, WHITE);
 		}
 
-		DrawPlane(plane, viewProjectionMatrix, viewportMatrix, WHITE);
-
+		DrawTriangle(triangle,viewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -343,4 +368,17 @@ void DrawLine(const Segment& line, const Matrix4x4& viewProjectionMatrix, const 
 	Vector3 start = Vector3::Transform(Vector3::Transform(line.origin, viewProjectionMatrix), viewportMatrix);
 	Vector3 end = Vector3::Transform(Vector3::Transform(line.origin + line.diff, viewProjectionMatrix), viewportMatrix);
 	Novice::DrawLine(static_cast<int>(start.x), static_cast<int>(start.y), static_cast<int>(end.x), static_cast<int>(end.y), color);
+}
+
+
+void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+	Vector3 v0 = Vector3::Transform(Vector3::Transform(triangle.vertices[0], viewProjectionMatrix), viewportMatrix);
+	Vector3 v1 = Vector3::Transform(Vector3::Transform(triangle.vertices[1], viewProjectionMatrix), viewportMatrix);
+	Vector3 v2 = Vector3::Transform(Vector3::Transform(triangle.vertices[2], viewProjectionMatrix), viewportMatrix);
+
+	Novice::DrawTriangle(
+		static_cast<int>(v0.x), static_cast<int>(v0.y),
+		static_cast<int>(v1.x), static_cast<int>(v1.y),
+		static_cast<int>(v2.x), static_cast<int>(v2.y),
+		color, kFillModeWireFrame);
 }
