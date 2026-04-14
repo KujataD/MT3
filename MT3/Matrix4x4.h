@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <assert.h>
 #include <cmath>
+#include <algorithm>
 #include "Vector3.h"
 
 class Matrix4x4 {
@@ -21,9 +22,9 @@ public:
 	static Matrix4x4 MakeRotateXMatrix(float radian);
 	static Matrix4x4 MakeRotateYMatrix(float radian);
 	static Matrix4x4 MakeRotateZMatrix(float radian);
-	
+
 	static Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate);
-	
+
 	// 透視投影行列
 	static Matrix4x4 MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip, float farClip);
 

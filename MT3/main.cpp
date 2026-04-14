@@ -13,13 +13,10 @@ static const int kColumnWidth = 66;
 static const int kWindowWidth = 1280;
 static const int kWindowHeight = 720;
 
-struct Sphere {
-	Vector3 center;
-	float radius;
-};
 
 void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
 void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label);
+
 
 void DrawGrid(const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix);
 
@@ -39,13 +36,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// ----------------------------------------------------
 
 	Vector3 cameraTranslate{0.0f, 2.0f, -6.49f};
-	Vector3 cameraRotate{0.26f, 0.0f, 0.0f};
+	Vector3 cameraRotate{0.21f, 0.0f, 0.0f};
 
-	// 球
-	Sphere sphere;
-	sphere.center = {0.0f, 0.0f, 0.0f};
-	sphere.radius = 0.5f;	
+	Segment segment{
+	    {-2.0f, -1.0f, 0.0f},
+        {3.0f,  2.0f,  2.0f}
+    };
 
+	Vector3 point{-1.5f, 0.6f, 0.6f};
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
 		// フレームの開始
@@ -58,6 +56,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		/// ↓更新処理ここから
 		///
+
+		Vector3 project = Vector3::Project(point - segment.origin, segment.diff);
+		Vector3 closestPoint = Vector3::ClosestPoint(point, segment);
 
 		// 各種行列の計算
 		Matrix4x4 cameraMatrix = Matrix4x4::MakeAffineMatrix({1.0f, 1.0f, 1.0f}, cameraRotate, cameraTranslate);
@@ -75,7 +76,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
-		DrawSphere(sphere, viewProjectionMatrix, viewportMatrix, BLACK);
+
+		Sphere pointSphere{point, 0.01f}; // 1cmの球を描画
+		Sphere closestPointSphere{closestPoint, 0.01f};
+		DrawSphere(pointSphere, viewProjectionMatrix, viewportMatrix, RED);
+		DrawSphere(closestPointSphere, viewProjectionMatrix, viewportMatrix, BLACK);
+
+		Vector3 start = Vector3::Transform(Vector3::Transform(segment.origin, viewProjectionMatrix), viewportMatrix);
+		Vector3 end = Vector3::Transform(Vector3::Transform(segment.origin + segment.diff, viewProjectionMatrix), viewportMatrix);
+		Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -88,10 +97,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #ifdef _DEBUG
 
 		ImGui::Begin("Window");
-		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
-		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
-		ImGui::DragFloat3("SphereCenter", &sphere.center.x, 0.01f);
-		ImGui::DragFloat("SphereRadius", &sphere.radius, 0.01f);
+		ImGui::DragFloat3("Point", &point.x, 0.1f);
+		ImGui::DragFloat3("Segment origin", &segment.origin.x, 0.1f);
+		ImGui::DragFloat3("Segment diff", &segment.diff.x, 0.1f);
+		ImGui::InputFloat3("Project", &project.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
 		ImGui::End();
 
 #endif // _DEBUG

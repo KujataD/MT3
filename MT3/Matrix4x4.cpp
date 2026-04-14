@@ -184,6 +184,12 @@ Matrix4x4 Matrix4x4::Transpose(const Matrix4x4& m) {
 	return result;
 }
 
+Matrix4x4 Matrix4x4::MakeIdentity() {
+	return {
+	    {{1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}}
+    };
+}
+
 Matrix4x4 Matrix4x4::MakeTranslateMatrix(const Vector3& translate) {
 	return {
 	    {{1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {translate.x, translate.y, translate.z, 1.0f}}
@@ -193,12 +199,6 @@ Matrix4x4 Matrix4x4::MakeTranslateMatrix(const Vector3& translate) {
 Matrix4x4 Matrix4x4::MakeScaleMatrix(const Vector3& scale) {
 	return {
 	    {{scale.x, 0.0f, 0.0f, 0.0f}, {0.0f, scale.y, 0.0f, 0.0f}, {0.0f, 0.0f, scale.z, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}}
-    };
-}
-
-Matrix4x4 Matrix4x4::MakeIdentity() {
-	return {
-	    {{1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}}
     };
 }
 
@@ -242,7 +242,6 @@ Matrix4x4 Matrix4x4::MakeAffineMatrix(const Vector3& scale, const Vector3& rotat
 	Matrix4x4 w = s * r * t;
 	return w;
 }
-
 
 Matrix4x4 Matrix4x4::MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip, float farClip) { 
 	return {

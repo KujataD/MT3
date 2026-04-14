@@ -13,3 +13,19 @@ Vector3 Vector3::Transform(const Vector3& v, const Matrix4x4& m) {
 	result.z /= w;
 	return result;
 }
+
+Vector3 Vector3::Project(const Vector3& a, const Vector3& b) { 
+	float dotAB = Dot(a, b); 
+	float fieldNormB = std::powf(Length(b), 2);
+	float dotNormAB = dotAB / fieldNormB;
+	Vector3 result = b * dotNormAB;
+	return result;
+}
+
+Vector3 Vector3::ClosestPoint(const Vector3& point, const Segment& segment) {
+	Vector3 a = point - segment.origin;
+	float t = Dot(a, segment.diff) / std::powf(Length(segment.diff), 2); 
+	t = std::clamp(t, 0.0f, 1.0f);
+	Vector3 cp = segment.origin + segment.diff * t;
+	return cp;
+}

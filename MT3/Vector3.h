@@ -3,6 +3,8 @@
 #include <cmath>
 
 class Matrix4x4;
+struct Segment;
+struct Sphere;
 
 class Vector3 {
 public:
@@ -41,4 +43,17 @@ public:
 	static float Length(const Vector3& v) { return std::sqrt(Dot(v, v)); }
 	static Vector3 Normalize(const Vector3& v) { return v / Length(v); }
 	static Vector3 Transform(const Vector3& v, const Matrix4x4& m);
+	static Vector3 Project(const Vector3& a, const Vector3& b);
+	static Vector3 ClosestPoint(const Vector3& point, const Segment& segment);
+};
+
+
+struct Segment {
+	Vector3 origin; // 始点
+	Vector3 diff;   // 終点の差分ベクトル
+};
+
+struct Sphere {
+	Vector3 center;
+	float radius;
 };
