@@ -37,6 +37,7 @@ public:
 	}
 
 	static float Dot(const Vector3& v1, const Vector3& v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z; }
+	static Vector3 Cross(const Vector3& a, const Vector3& b) { return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x}; }
 	static float Length(const Vector3& v) { return std::sqrt(Dot(v, v)); }
 	static Vector3 Normalize(const Vector3& v) { return v / Length(v); }
 	static Vector3 Transform(const Vector3& v, const Matrix4x4& m);
