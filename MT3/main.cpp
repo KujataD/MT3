@@ -22,6 +22,8 @@ void DrawGrid(const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMa
 
 void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
+bool IsCollision(const Sphere& a, const Sphere& b);
+
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
@@ -38,12 +40,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Vector3 cameraTranslate{0.0f, 2.0f, -6.49f};
 	Vector3 cameraRotate{0.21f, 0.0f, 0.0f};
 
-	Segment segment{
-	    {-2.0f, -1.0f, 0.0f},
-        {3.0f,  2.0f,  2.0f}
-    };
+	int mouseX = 0;
+	int mouseY = 0;
+	int prevMouseX = 0;
+	int	prevMouseY = 0;
+	const float kRotateSpeed = 0.0025f;
+	const float kMoveSpeed = 0.1f;
 
-	Vector3 point{-1.5f, 0.6f, 0.6f};
+	Sphere sphere[2];
+	sphere[0].center = {-1.0f, 0.0f, 0.0f};
+	sphere[0].radius = 1.0f;
+	sphere[1].center = {1.0f, 0.0f, 0.0f};
+	sphere[1].radius = 0.3f;
+
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
 		// フレームの開始
@@ -57,8 +66,42 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓更新処理ここから
 		///
 
-		Vector3 project = Vector3::Project(point - segment.origin, segment.diff);
-		Vector3 closestPoint = Vector3::ClosestPoint(point, segment);
+		{ // カメラ操作
+			prevMouseX = mouseX;
+			prevMouseY = mouseY;
+			Novice::GetMousePosition(&mouseX, &mouseY);
+
+			if (Novice::IsPressMouse(1)) {
+				int dx = mouseX - prevMouseX;
+				int dy = mouseY - prevMouseY;
+
+				cameraRotate.y += dx * kRotateSpeed;
+				cameraRotate.x += dy * kRotateSpeed;
+			}
+
+			Vector3 forward{sinf(cameraRotate.y), 0, cosf(cameraRotate.y)};
+			Vector3 right{forward.z, 0, -forward.x};
+
+			if (keys[DIK_W]) {
+				cameraTranslate = cameraTranslate + forward * kMoveSpeed;
+			}
+			if (keys[DIK_S]) {
+				cameraTranslate = cameraTranslate - forward * kMoveSpeed;
+			}
+			if (keys[DIK_A]) {
+				cameraTranslate = cameraTranslate - right * kMoveSpeed;
+			}
+			if (keys[DIK_D]) {
+				cameraTranslate = cameraTranslate + right * kMoveSpeed;
+			}
+			if (keys[DIK_Q]) {
+				cameraTranslate.y += kMoveSpeed;
+			}
+			if (keys[DIK_E]) {
+				cameraTranslate.y -= kMoveSpeed;
+			}
+		}
+
 
 		// 各種行列の計算
 		Matrix4x4 cameraMatrix = Matrix4x4::MakeAffineMatrix({1.0f, 1.0f, 1.0f}, cameraRotate, cameraTranslate);
@@ -77,14 +120,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
 
-		Sphere pointSphere{point, 0.01f}; // 1cmの球を描画
-		Sphere closestPointSphere{closestPoint, 0.01f};
-		DrawSphere(pointSphere, viewProjectionMatrix, viewportMatrix, RED);
-		DrawSphere(closestPointSphere, viewProjectionMatrix, viewportMatrix, BLACK);
+		if (IsCollision(sphere[0], sphere[1])) {
+			DrawSphere(sphere[0], viewProjectionMatrix, viewportMatrix, RED);
+		} else {
+			DrawSphere(sphere[0], viewProjectionMatrix, viewportMatrix, WHITE);
+		}
 
-		Vector3 start = Vector3::Transform(Vector3::Transform(segment.origin, viewProjectionMatrix), viewportMatrix);
-		Vector3 end = Vector3::Transform(Vector3::Transform(segment.origin + segment.diff, viewProjectionMatrix), viewportMatrix);
-		Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
+		DrawSphere(sphere[1], viewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -97,11 +139,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #ifdef _DEBUG
 
 		ImGui::Begin("Window");
-		ImGui::DragFloat3("Point", &point.x, 0.1f);
-		ImGui::DragFloat3("Segment origin", &segment.origin.x, 0.1f);
-		ImGui::DragFloat3("Segment diff", &segment.diff.x, 0.1f);
-		ImGui::InputFloat3("Project", &project.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
+		ImGui::DragFloat3("Sphere[0].Center", &sphere[0].center.x, 0.01f);
+		ImGui::DragFloat("Sphere[0].Radius", &sphere[0].radius, 0.01f);
+		ImGui::DragFloat3("Sphere[1].Center", &sphere[1].center.x, 0.01f);
+		ImGui::DragFloat("Sphere[1].Radius", &sphere[1].radius, 0.01f);
 		ImGui::End();
+
+		Novice::ScreenPrintf(10, 10, "Mouse Right Drag : Camera Rotate");
+		Novice::ScreenPrintf(10, 30, "WASDQE : Camera Transform");
 
 #endif // _DEBUG
 
@@ -215,4 +260,9 @@ void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, con
 			Novice::DrawLine(static_cast<int>(a.x), static_cast<int>(a.y), static_cast<int>(c.x), static_cast<int>(c.y), color);
 		}
 	}
+}
+
+bool IsCollision(const Sphere& a, const Sphere& b) {
+	float distance = Vector3::Length(b.center - a.center);
+	return (distance <= a.radius + b.radius);
 }
