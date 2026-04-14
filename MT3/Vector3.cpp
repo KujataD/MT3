@@ -29,3 +29,10 @@ Vector3 Vector3::ClosestPoint(const Vector3& point, const Segment& segment) {
 	Vector3 cp = segment.origin + segment.diff * t;
 	return cp;
 }
+
+Vector3 Vector3::Perpendicular(const Vector3& vector) {
+	if (vector.x != 0.0f || vector.y != 0.0f) {
+		return {-vector.y, vector.x, 0.0f};
+	}
+	return {0.0f, -vector.z, vector.y};
+}

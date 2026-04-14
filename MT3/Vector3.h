@@ -45,6 +45,7 @@ public:
 	static Vector3 Transform(const Vector3& v, const Matrix4x4& m);
 	static Vector3 Project(const Vector3& a, const Vector3& b);
 	static Vector3 ClosestPoint(const Vector3& point, const Segment& segment);
+	static Vector3 Perpendicular(const Vector3& vector);
 };
 
 
@@ -56,4 +57,9 @@ struct Segment {
 struct Sphere {
 	Vector3 center;
 	float radius;
+};
+
+struct Plane {
+	Vector3 normal;
+	float distance;
 };

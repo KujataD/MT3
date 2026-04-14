@@ -13,16 +13,19 @@ static const int kColumnWidth = 66;
 static const int kWindowWidth = 1280;
 static const int kWindowHeight = 720;
 
-
 void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
 void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label);
-
 
 void DrawGrid(const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix);
 
 void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
-bool IsCollision(const Sphere& a, const Sphere& b);
+bool IsCollision(const Sphere& sphere, const Plane& plane);
+
+bool IsCollision(const Plane& plane, const Segment& line);
+
+void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
+
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
@@ -43,15 +46,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	int mouseX = 0;
 	int mouseY = 0;
 	int prevMouseX = 0;
-	int	prevMouseY = 0;
+	int prevMouseY = 0;
 	const float kRotateSpeed = 0.0025f;
 	const float kMoveSpeed = 0.1f;
 
-	Sphere sphere[2];
-	sphere[0].center = {-1.0f, 0.0f, 0.0f};
-	sphere[0].radius = 1.0f;
-	sphere[1].center = {1.0f, 0.0f, 0.0f};
-	sphere[1].radius = 0.3f;
+	Sphere sphere;
+	sphere.center = {0.0f, 0.0f, 0.0f};
+	sphere.radius = 0.6f;
+
+	Plane plane;
+	plane.normal = {0.0f, 1.0f, 0.0f};
+	plane.distance = 1.0f;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -102,7 +107,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 		}
 
-
 		// 各種行列の計算
 		Matrix4x4 cameraMatrix = Matrix4x4::MakeAffineMatrix({1.0f, 1.0f, 1.0f}, cameraRotate, cameraTranslate);
 		Matrix4x4 viewMatrix = Matrix4x4::Inverse(cameraMatrix);
@@ -120,13 +124,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
 
-		if (IsCollision(sphere[0], sphere[1])) {
-			DrawSphere(sphere[0], viewProjectionMatrix, viewportMatrix, RED);
+		if (IsCollision(sphere, plane)) {
+			DrawSphere(sphere, viewProjectionMatrix, viewportMatrix, RED);
 		} else {
-			DrawSphere(sphere[0], viewProjectionMatrix, viewportMatrix, WHITE);
+			DrawSphere(sphere, viewProjectionMatrix, viewportMatrix, WHITE);
 		}
 
-		DrawSphere(sphere[1], viewProjectionMatrix, viewportMatrix, WHITE);
+		DrawPlane(plane, viewProjectionMatrix, viewportMatrix, WHITE);
+
 
 		///
 		/// ↑描画処理ここまで
@@ -139,14 +144,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #ifdef _DEBUG
 
 		ImGui::Begin("Window");
-		ImGui::DragFloat3("Sphere[0].Center", &sphere[0].center.x, 0.01f);
-		ImGui::DragFloat("Sphere[0].Radius", &sphere[0].radius, 0.01f);
-		ImGui::DragFloat3("Sphere[1].Center", &sphere[1].center.x, 0.01f);
-		ImGui::DragFloat("Sphere[1].Radius", &sphere[1].radius, 0.01f);
+		ImGui::DragFloat3("Sphere[0].Center", &sphere.center.x, 0.01f);
+		ImGui::DragFloat("Sphere[0].Radius", &sphere.radius, 0.01f);
+		ImGui::DragFloat3("Plane.Normal", &plane.normal.x, 0.01f);
+		ImGui::DragFloat("Plane.Distance", &plane.distance, 0.01f);
 		ImGui::End();
 
 		Novice::ScreenPrintf(10, 10, "Mouse Right Drag : Camera Rotate");
-		Novice::ScreenPrintf(10, 30, "WASDQE : Camera Transform");
+		Novice::ScreenPrintf(10, 30, "WASDQE : MoveCamera");
 
 #endif // _DEBUG
 
@@ -231,7 +236,7 @@ void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, con
 
 	for (uint32_t latIndex = 0; latIndex < kSubdivision; ++latIndex) {
 		float lat = static_cast<float>(-M_PI / 2.0f + kLatEvery * latIndex); // 緯度
-		
+
 		for (uint32_t lonIndex = 0; lonIndex < kSubdivision; ++lonIndex) {
 			float lon = lonIndex * kLonEvery; // 経度
 
@@ -262,7 +267,38 @@ void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, con
 	}
 }
 
-bool IsCollision(const Sphere& a, const Sphere& b) {
-	float distance = Vector3::Length(b.center - a.center);
-	return (distance <= a.radius + b.radius);
+bool IsCollision(const Sphere& sphere, const Plane& plane) { 
+	float k = std::abs(Vector3::Dot(plane.normal, sphere.center) - plane.distance);
+	return (k <= sphere.radius);
+}
+
+bool IsCollision(const Plane& plane, const Segment& line) {
+	float dot = Vector3::Dot(plane.normal, line.diff);
+
+	if (dot == 0.0f) {
+		return false;
+	}
+	
+	float t = (plane.distance - Vector3::Dot(line.origin, plane.normal)) / dot;
+
+	return (t >= 0.0f && t <= 1.0f);
+}
+
+void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+	Vector3 center = plane.normal * plane.distance;
+	Vector3 perpendiculars[4];
+	perpendiculars[0] = Vector3::Normalize(Vector3::Perpendicular(plane.normal));
+	perpendiculars[1] = {-perpendiculars[0].x, -perpendiculars[0].y, -perpendiculars[0].z};
+	perpendiculars[2] = Vector3::Cross(plane.normal, perpendiculars[0]);
+	perpendiculars[3] = {-perpendiculars[2].x, -perpendiculars[2].y, -perpendiculars[2].z}; 
+	Vector3 points[4];
+	for (int32_t index = 0; index < 4; ++index) {
+		Vector3 extend = perpendiculars[index] * 2.0f;
+		Vector3 point = center + extend;
+		points[index] = Vector3::Transform(Vector3::Transform(point, viewProjectionMatrix), viewportMatrix);
+	}
+	Novice::DrawLine(static_cast<int>(points[0].x), static_cast<int>(points[0].y), static_cast<int>(points[2].x), static_cast<int>(points[2].y), color);
+	Novice::DrawLine(static_cast<int>(points[2].x), static_cast<int>(points[2].y), static_cast<int>(points[1].x), static_cast<int>(points[1].y), color);
+	Novice::DrawLine(static_cast<int>(points[1].x), static_cast<int>(points[1].y), static_cast<int>(points[3].x), static_cast<int>(points[3].y), color);
+	Novice::DrawLine(static_cast<int>(points[3].x), static_cast<int>(points[3].y), static_cast<int>(points[0].x), static_cast<int>(points[0].y), color);
 }
