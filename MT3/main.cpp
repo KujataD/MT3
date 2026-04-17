@@ -55,6 +55,8 @@ bool IsCollision(const Segment& segment, const Triangle& triangle);
 
 bool IsCollision(const AABB& aabb1, const AABB& aabb2);
 
+bool IsCollision(const AABB& aabb, const Sphere& sphere);
+
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
 void DrawLine(const Segment& line, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
@@ -87,14 +89,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	const float kMoveSpeed = 0.1f;
 
 
-	AABB aabb1{
+	AABB aabb{
 	    .min{-0.5f, -0.5f, -0.5f},
 	    .max{0.0f,  0.0f,  0.0f },
 	};
 
-	AABB aabb2{
-	    .min{0.2f, 0.2f, 0.2f},
-	    .max{1.0f, 1.0f, 1.0f},
+
+	Sphere sphere{
+		.center{2.0f, 0.0f, 0.0f},
+		.radius{0.5f},
 	};
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -153,8 +156,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 viewProjectionMatrix = viewMatrix * projectionMatrix;
 		Matrix4x4 viewportMatrix = Matrix4x4::MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
-		aabb1.SwapMinMax();
-		aabb2.SwapMinMax();
+		aabb.SwapMinMax();
 
 		///
 		/// ↑更新処理ここまで
@@ -165,8 +167,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
-		DrawAABB(aabb2, viewProjectionMatrix, viewportMatrix, WHITE);
-		DrawAABB(aabb1, viewProjectionMatrix, viewportMatrix, (IsCollision(aabb1,aabb2)) ? RED : WHITE);
+		DrawSphere(sphere, viewProjectionMatrix, viewportMatrix, WHITE);
+		DrawAABB(aabb, viewProjectionMatrix, viewportMatrix, (IsCollision(aabb,sphere)) ? RED : WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -179,10 +181,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #ifdef _DEBUG
 
 		ImGui::Begin("Window");
-		ImGui::DragFloat3("AABB1.Max", &aabb1.max.x, 0.01f);
-		ImGui::DragFloat3("AABB1.Min", &aabb1.min.x, 0.01f);
-		ImGui::DragFloat3("AABB2.Max", &aabb2.max.x, 0.01f);
-		ImGui::DragFloat3("AABB2.Min", &aabb2.min.x, 0.01f);
+		ImGui::DragFloat3("AABB.Max", &aabb.max.x, 0.01f);
+		ImGui::DragFloat3("AABB.Min", &aabb.min.x, 0.01f);
+		ImGui::DragFloat3("Sphere.Center", &sphere.center.x, 0.01f);
+		ImGui::DragFloat("Sphere.Radius", &sphere.radius, 0.01f);
 		ImGui::End();
 
 		Novice::ScreenPrintf(10, 10, "Mouse Right Drag : Camera Rotate");
@@ -354,6 +356,21 @@ bool IsCollision(const AABB& aabb1, const AABB& aabb2) {
 		(aabb1.min.x <= aabb2.max.x && aabb1.max.x >= aabb2.min.x) && 
 		(aabb1.min.y <= aabb2.max.y && aabb1.max.y >= aabb2.min.y) && 
 		(aabb1.min.z <= aabb2.max.z && aabb1.max.z >= aabb2.min.z); 
+}
+
+bool IsCollision(const AABB& aabb, const Sphere& sphere) { 
+	//最近接点を求める
+	Vector3 closestPoint{
+	    std::clamp(sphere.center.x, aabb.min.x, aabb.max.x),
+	    std::clamp(sphere.center.y, aabb.min.y, aabb.max.y),
+	    std::clamp(sphere.center.z, aabb.min.z, aabb.max.z),
+	};
+	
+	// 最近接点と球の中心との距離を求める
+	float distance = Vector3::Length(closestPoint - sphere.center);
+	
+	// 距離が半径よりも小さければ衝突
+	return (distance <= sphere.radius);
 }
 
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
