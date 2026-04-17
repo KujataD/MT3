@@ -57,6 +57,8 @@ bool IsCollision(const AABB& aabb1, const AABB& aabb2);
 
 bool IsCollision(const AABB& aabb, const Sphere& sphere);
 
+bool IsCollision(const AABB& aabb, const Segment& segment);
+
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
 void DrawLine(const Segment& line, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
@@ -88,16 +90,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	const float kRotateSpeed = 0.0025f;
 	const float kMoveSpeed = 0.1f;
 
-
 	AABB aabb{
 	    .min{-0.5f, -0.5f, -0.5f},
-	    .max{0.0f,  0.0f,  0.0f },
+	    .max{0.5f,  0.5f,  0.5f },
 	};
 
-
-	Sphere sphere{
-		.center{2.0f, 0.0f, 0.0f},
-		.radius{0.5f},
+	Segment segment{
+	    .origin{-0.7f, 0.3f,  0.0f},
+	    .diff{2.0f,  -0.5f, 0.0f},
 	};
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -167,8 +167,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
-		DrawSphere(sphere, viewProjectionMatrix, viewportMatrix, WHITE);
-		DrawAABB(aabb, viewProjectionMatrix, viewportMatrix, (IsCollision(aabb,sphere)) ? RED : WHITE);
+		DrawLine(segment, viewProjectionMatrix, viewportMatrix, WHITE);
+		DrawAABB(aabb, viewProjectionMatrix, viewportMatrix, (IsCollision(aabb, segment)) ? RED : WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -183,8 +183,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Begin("Window");
 		ImGui::DragFloat3("AABB.Max", &aabb.max.x, 0.01f);
 		ImGui::DragFloat3("AABB.Min", &aabb.min.x, 0.01f);
-		ImGui::DragFloat3("Sphere.Center", &sphere.center.x, 0.01f);
-		ImGui::DragFloat("Sphere.Radius", &sphere.radius, 0.01f);
+		ImGui::DragFloat3("Segmet.Origin", &segment.origin.x, 0.01f);
+		ImGui::DragFloat3("Segmet.Diff", &segment.diff.x, 0.01f);
 		ImGui::End();
 
 		Novice::ScreenPrintf(10, 10, "Mouse Right Drag : Camera Rotate");
@@ -351,26 +351,55 @@ bool IsCollision(const Segment& segment, const Triangle& triangle) {
 	return (resultA && resultB);
 }
 
-bool IsCollision(const AABB& aabb1, const AABB& aabb2) { 
-	return
-		(aabb1.min.x <= aabb2.max.x && aabb1.max.x >= aabb2.min.x) && 
-		(aabb1.min.y <= aabb2.max.y && aabb1.max.y >= aabb2.min.y) && 
-		(aabb1.min.z <= aabb2.max.z && aabb1.max.z >= aabb2.min.z); 
+bool IsCollision(const AABB& aabb1, const AABB& aabb2) {
+	bool resultX = (aabb1.min.x <= aabb2.max.x && aabb1.max.x >= aabb2.min.x);
+	bool resultY = (aabb1.min.y <= aabb2.max.y && aabb1.max.y >= aabb2.min.y);
+	bool resultZ = (aabb1.min.z <= aabb2.max.z && aabb1.max.z >= aabb2.min.z);
+
+	return (resultX && resultY && resultZ);
 }
 
-bool IsCollision(const AABB& aabb, const Sphere& sphere) { 
-	//最近接点を求める
+bool IsCollision(const AABB& aabb, const Sphere& sphere) {
+	// 最近接点を求める
 	Vector3 closestPoint{
 	    std::clamp(sphere.center.x, aabb.min.x, aabb.max.x),
 	    std::clamp(sphere.center.y, aabb.min.y, aabb.max.y),
 	    std::clamp(sphere.center.z, aabb.min.z, aabb.max.z),
 	};
-	
+
 	// 最近接点と球の中心との距離を求める
 	float distance = Vector3::Length(closestPoint - sphere.center);
-	
+
 	// 距離が半径よりも小さければ衝突
 	return (distance <= sphere.radius);
+}
+
+bool IsCollision(const AABB& aabb, const Segment& segment) {
+	float txMin = (aabb.min.x - segment.origin.x) / segment.diff.x;
+	float txMax = (aabb.max.x - segment.origin.x) / segment.diff.x;
+	float tyMin = (aabb.min.y - segment.origin.y) / segment.diff.y;
+	float tyMax = (aabb.max.y - segment.origin.y) / segment.diff.y;
+	float tzMin = (aabb.min.z - segment.origin.z) / segment.diff.z;
+	float tzMax = (aabb.max.z - segment.origin.z) / segment.diff.z;
+
+	float tNearX = (std::min)(txMin, txMax);
+	float tNearY = (std::min)(tyMin, tyMax);
+	float tNearZ = (std::min)(tzMin, tzMax);
+	float tFarX = (std::max)(txMin, txMax);
+	float tFarY = (std::max)(tyMin, tyMax);
+	float tFarZ = (std::max)(tzMin, tzMax);
+
+	// AABBとの衝突点(貫通点)のtが小さい方
+	float tmin = (std::max)((std::max)(tNearX, tNearY), tNearZ);
+	// AABBとの衝突点(貫通点)のtが大きい方
+	float tmax = (std::min)((std::min)(tFarX, tFarY), tFarZ);
+	if (tmin <= tmax) {
+		if (tmax >= 0.0f && tmin <= 1.0f) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
