@@ -5,6 +5,7 @@
 class Matrix4x4;
 struct Segment;
 struct Sphere;
+struct Plane;
 
 class Vector3 {
 public:
@@ -47,7 +48,6 @@ public:
 	static Vector3 ClosestPoint(const Vector3& point, const Segment& segment);
 	static Vector3 Perpendicular(const Vector3& vector);
 };
-
 
 struct Segment {
 	Vector3 origin; // 始点

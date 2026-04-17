@@ -20,6 +20,23 @@ struct Triangle {
 struct AABB {
 	Vector3 min;
 	Vector3 max;
+
+	void SwapMinMax() {
+		if (min.x > max.x) {
+			min.x = (std::min)(min.x, max.x);
+			max.x = (std::max)(min.x, max.x);
+		}
+
+		if (min.y > max.y) {
+			min.y = (std::min)(min.y, max.y);
+			max.y = (std::max)(min.y, max.y);
+		}
+
+		if (min.z > max.z) {
+			min.z = (std::min)(min.z, max.z);
+			max.z = (std::max)(min.z, max.z);
+		}
+	}
 };
 
 void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
@@ -44,6 +61,8 @@ void DrawLine(const Segment& line, const Matrix4x4& viewProjectionMatrix, const 
 
 void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
+void DrawAABB(const AABB& aabb, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
+
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
@@ -67,23 +86,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	const float kRotateSpeed = 0.0025f;
 	const float kMoveSpeed = 0.1f;
 
-	Plane plane;
-	plane.normal = {0.0f, 1.0f, 0.0f};
-	plane.distance = 1.0f;
-
-	Segment segment;
-	segment.origin = {-0.5f, 0.5f, 0.8f};
-	segment.diff = {1.0f, 0.5f, 0.8f};
-
-	Triangle triangle;
-	triangle.vertices[0] = {0.0f, 1.0f, 0.0f};
-	triangle.vertices[1] = {1.0f, 0.0f, 0.0f};
-	triangle.vertices[2] = {-1.0f, 0.0f, 0.0f};
 
 	AABB aabb1{
-	    .min{-0.5f, -0.5f, -0.5f}, 
-		.max{0.0f, 0.0f, 0.0f},
-    };
+	    .min{-0.5f, -0.5f, -0.5f},
+	    .max{0.0f,  0.0f,  0.0f },
+	};
 
 	AABB aabb2{
 	    .min{0.2f, 0.2f, 0.2f},
@@ -146,6 +153,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 viewProjectionMatrix = viewMatrix * projectionMatrix;
 		Matrix4x4 viewportMatrix = Matrix4x4::MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
+		aabb1.SwapMinMax();
+		aabb2.SwapMinMax();
+
 		///
 		/// ↑更新処理ここまで
 		///
@@ -155,14 +165,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
-		
-		if (IsCollision(segment, triangle)) {
-			DrawLine(segment, viewProjectionMatrix, viewportMatrix, RED);
-		} else {
-			DrawLine(segment, viewProjectionMatrix, viewportMatrix, WHITE);
-		}
-
-		DrawTriangle(triangle,viewProjectionMatrix, viewportMatrix, WHITE);
+		DrawAABB(aabb2, viewProjectionMatrix, viewportMatrix, WHITE);
+		DrawAABB(aabb1, viewProjectionMatrix, viewportMatrix, (IsCollision(aabb1,aabb2)) ? RED : WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -175,10 +179,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #ifdef _DEBUG
 
 		ImGui::Begin("Window");
-		ImGui::DragFloat3("Plane.Normal", &plane.normal.x, 0.01f);
-		ImGui::DragFloat("Plane.Distance", &plane.distance, 0.01f);
-		ImGui::DragFloat3("Segment.Origin", &segment.origin.x, 0.01f);
-		ImGui::DragFloat3("Segment.Diff", &segment.diff.x, 0.01f);
+		ImGui::DragFloat3("AABB1.Max", &aabb1.max.x, 0.01f);
+		ImGui::DragFloat3("AABB1.Min", &aabb1.min.x, 0.01f);
+		ImGui::DragFloat3("AABB2.Max", &aabb2.max.x, 0.01f);
+		ImGui::DragFloat3("AABB2.Min", &aabb2.min.x, 0.01f);
 		ImGui::End();
 
 		Novice::ScreenPrintf(10, 10, "Mouse Right Drag : Camera Rotate");
@@ -298,7 +302,7 @@ void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, con
 	}
 }
 
-bool IsCollision(const Sphere& sphere, const Plane& plane) { 
+bool IsCollision(const Sphere& sphere, const Plane& plane) {
 	float k = std::abs(Vector3::Dot(plane.normal, sphere.center) - plane.distance);
 	return (k <= sphere.radius);
 }
@@ -309,7 +313,7 @@ bool IsCollision(const Segment& segment, const Plane& plane) {
 	if (dot == 0.0f) {
 		return false;
 	}
-	
+
 	float t = (plane.distance - Vector3::Dot(segment.origin, plane.normal)) / dot;
 
 	return (t >= 0.0f && t <= 1.0f);
@@ -319,7 +323,7 @@ bool IsCollision(const Segment& segment, const Triangle& triangle) {
 	Vector3 normal = Vector3::Normalize(Vector3::Cross(triangle.vertices[1] - triangle.vertices[0], triangle.vertices[2] - triangle.vertices[0]));
 
 	float dot = Vector3::Dot(normal, segment.diff);
-	
+
 	if (dot == 0.0f) {
 		return false;
 	}
@@ -328,7 +332,7 @@ bool IsCollision(const Segment& segment, const Triangle& triangle) {
 	float t = (d - Vector3::Dot(segment.origin, normal)) / dot;
 
 	Vector3 p = segment.origin + segment.diff * t;
-    
+
 	Vector3 v01 = triangle.vertices[1] - triangle.vertices[0];
 	Vector3 v12 = triangle.vertices[2] - triangle.vertices[1];
 	Vector3 v20 = triangle.vertices[0] - triangle.vertices[2];
@@ -345,13 +349,20 @@ bool IsCollision(const Segment& segment, const Triangle& triangle) {
 	return (resultA && resultB);
 }
 
+bool IsCollision(const AABB& aabb1, const AABB& aabb2) { 
+	return
+		(aabb1.min.x <= aabb2.max.x && aabb1.max.x >= aabb2.min.x) && 
+		(aabb1.min.y <= aabb2.max.y && aabb1.max.y >= aabb2.min.y) && 
+		(aabb1.min.z <= aabb2.max.z && aabb1.max.z >= aabb2.min.z); 
+}
+
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
 	Vector3 center = plane.normal * plane.distance;
 	Vector3 perpendiculars[4];
 	perpendiculars[0] = Vector3::Normalize(Vector3::Perpendicular(plane.normal));
 	perpendiculars[1] = {-perpendiculars[0].x, -perpendiculars[0].y, -perpendiculars[0].z};
 	perpendiculars[2] = Vector3::Cross(plane.normal, perpendiculars[0]);
-	perpendiculars[3] = {-perpendiculars[2].x, -perpendiculars[2].y, -perpendiculars[2].z}; 
+	perpendiculars[3] = {-perpendiculars[2].x, -perpendiculars[2].y, -perpendiculars[2].z};
 	Vector3 points[4];
 	for (int32_t index = 0; index < 4; ++index) {
 		Vector3 extend = perpendiculars[index] * 2.0f;
@@ -370,15 +381,41 @@ void DrawLine(const Segment& line, const Matrix4x4& viewProjectionMatrix, const 
 	Novice::DrawLine(static_cast<int>(start.x), static_cast<int>(start.y), static_cast<int>(end.x), static_cast<int>(end.y), color);
 }
 
-
 void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
 	Vector3 v0 = Vector3::Transform(Vector3::Transform(triangle.vertices[0], viewProjectionMatrix), viewportMatrix);
 	Vector3 v1 = Vector3::Transform(Vector3::Transform(triangle.vertices[1], viewProjectionMatrix), viewportMatrix);
 	Vector3 v2 = Vector3::Transform(Vector3::Transform(triangle.vertices[2], viewProjectionMatrix), viewportMatrix);
 
-	Novice::DrawTriangle(
-		static_cast<int>(v0.x), static_cast<int>(v0.y),
-		static_cast<int>(v1.x), static_cast<int>(v1.y),
-		static_cast<int>(v2.x), static_cast<int>(v2.y),
-		color, kFillModeWireFrame);
+	Novice::DrawTriangle(static_cast<int>(v0.x), static_cast<int>(v0.y), static_cast<int>(v1.x), static_cast<int>(v1.y), static_cast<int>(v2.x), static_cast<int>(v2.y), color, kFillModeWireFrame);
+}
+
+void DrawAABB(const AABB& aabb, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+	Vector3 vertices[8];
+
+	vertices[0] = {aabb.min.x, aabb.min.y, aabb.min.z};
+	vertices[1] = {aabb.max.x, aabb.min.y, aabb.min.z};
+	vertices[2] = {aabb.max.x, aabb.max.y, aabb.min.z};
+	vertices[3] = {aabb.min.x, aabb.max.y, aabb.min.z};
+	vertices[4] = {aabb.min.x, aabb.min.y, aabb.max.z};
+	vertices[5] = {aabb.max.x, aabb.min.y, aabb.max.z};
+	vertices[6] = {aabb.max.x, aabb.max.y, aabb.max.z};
+	vertices[7] = {aabb.min.x, aabb.max.y, aabb.max.z};
+
+	for (int32_t i = 0; i < 8; ++i) {
+		vertices[i] = Vector3::Transform(Vector3::Transform(vertices[i], viewProjectionMatrix), viewportMatrix);
+	}
+
+	Novice::DrawLine(static_cast<int>(vertices[0].x), static_cast<int>(vertices[0].y), static_cast<int>(vertices[1].x), static_cast<int>(vertices[1].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[1].x), static_cast<int>(vertices[1].y), static_cast<int>(vertices[2].x), static_cast<int>(vertices[2].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[2].x), static_cast<int>(vertices[2].y), static_cast<int>(vertices[3].x), static_cast<int>(vertices[3].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[3].x), static_cast<int>(vertices[3].y), static_cast<int>(vertices[0].x), static_cast<int>(vertices[0].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[4].x), static_cast<int>(vertices[4].y), static_cast<int>(vertices[5].x), static_cast<int>(vertices[5].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[5].x), static_cast<int>(vertices[5].y), static_cast<int>(vertices[6].x), static_cast<int>(vertices[6].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[6].x), static_cast<int>(vertices[6].y), static_cast<int>(vertices[7].x), static_cast<int>(vertices[7].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[7].x), static_cast<int>(vertices[7].y), static_cast<int>(vertices[4].x), static_cast<int>(vertices[4].y), color);
+
+	Novice::DrawLine(static_cast<int>(vertices[0].x), static_cast<int>(vertices[0].y), static_cast<int>(vertices[4].x), static_cast<int>(vertices[4].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[1].x), static_cast<int>(vertices[1].y), static_cast<int>(vertices[5].x), static_cast<int>(vertices[5].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[2].x), static_cast<int>(vertices[2].y), static_cast<int>(vertices[6].x), static_cast<int>(vertices[6].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[3].x), static_cast<int>(vertices[3].y), static_cast<int>(vertices[7].x), static_cast<int>(vertices[7].y), color);
 }
