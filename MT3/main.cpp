@@ -67,14 +67,14 @@ void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewProjectionMatri
 
 void DrawAABB(const AABB& aabb, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
-// 確認課題 03_00
-// ------------------------------------------------------------------
-
 Vector3 Lerp(const Vector3& v1, const Vector3 v2, float t);
 
 Vector3 Bezier(const Vector3& p0, const Vector3& p1, const Vector3& p2, float t);
 
 void DrawBezier(const Vector3& controlPoint0, const Vector3& controlPoint1, const Vector3& controlPoint2, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
+
+// 確認課題 03_01
+// ------------------------------------------------------------------
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
@@ -99,13 +99,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	const float kRotateSpeed = 0.0025f;
 	const float kMoveSpeed = 0.1f;
 
-	// 課題
+	// 課題 03_01
 	// ----------------------------------------------------
-	Vector3 controlPoints[3] = {
-	    {-0.8f, 0.58f, 1.0f },
-	    {1.76f, 1.0f,  -0.3f},
-	    {0.94f, -0.7f, 2.3f },
+	Vector3 translates[3] = {
+	    {0.2f, 1.0f, 0.0f},
+	    {0.4f, 0.0f, 0.0f},
+	    {0.3f, 0.0f, 0.0f},
 	};
+
+	Vector3 rotates[3] = {
+	    {0.0f, 0.0f, -6.8f},
+	    {0.0f, 0.0f, -1.4f},
+	    {0.0f, 0.0f, 0.0f },
+	};
+
+	Vector3 scales[3] = {
+	    {1.0f, 1.0f, 1.0f},
+        {1.0f, 1.0f, 1.0f},
+        {1.0f, 1.0f, 1.0f}
+    };
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -163,6 +175,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 viewProjectionMatrix = viewMatrix * projectionMatrix;
 		Matrix4x4 viewportMatrix = Matrix4x4::MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
+		// 課題 03_01
+		// ------------------------------------------------
+
+		Matrix4x4 localMatrix[3];
+		Matrix4x4 worldMatrix[3];
+
+		for (int i = 0; i < 3; i++) {
+			localMatrix[i] = Matrix4x4::MakeAffineMatrix(scales[i], rotates[i], translates[i]);
+		}
+
+		worldMatrix[0] = localMatrix[0];
+		worldMatrix[1] = localMatrix[1] * worldMatrix[0];
+		worldMatrix[2] = localMatrix[2] * worldMatrix[1];
 
 		///
 		/// ↑更新処理ここまで
@@ -173,10 +198,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
-		DrawBezier(controlPoints[0], controlPoints[1], controlPoints[2], viewProjectionMatrix, viewportMatrix, WHITE);
-		DrawSphere({controlPoints[0], 0.01f}, viewProjectionMatrix, viewportMatrix, BLACK);
-		DrawSphere({controlPoints[1], 0.01f}, viewProjectionMatrix, viewportMatrix, BLACK);
-		DrawSphere({controlPoints[2], 0.01f}, viewProjectionMatrix, viewportMatrix, BLACK);
+
+		{
+			Vector3 worldPositions[3];
+			Matrix4x4 mvps[3];
+			for (int i = 0; i < 3; i++) {
+				worldPositions[i] = {worldMatrix[i].m[3][0], worldMatrix[i].m[3][1], worldMatrix[i].m[3][2]};
+				mvps[i] = worldMatrix[i] * viewProjectionMatrix;
+			}
+			DrawSphere({worldPositions[0], 0.1f}, viewProjectionMatrix, viewportMatrix, 0xFF0000FF);
+			DrawSphere({worldPositions[1], 0.1f}, viewProjectionMatrix, viewportMatrix, 0x00FF00FF);
+			DrawSphere({worldPositions[2], 0.1f}, viewProjectionMatrix, viewportMatrix, 0x0000FFFF);
+
+			for (int i = 0; i < 3; i++) {
+				worldPositions[i] = Vector3::Transform(Vector3::Transform(worldPositions[i], viewProjectionMatrix), viewportMatrix);
+			}
+			Novice::DrawLine(static_cast<int>(worldPositions[0].x), static_cast<int>(worldPositions[0].y), static_cast<int>(worldPositions[1].x), static_cast<int>(worldPositions[1].y), WHITE);
+			Novice::DrawLine(static_cast<int>(worldPositions[1].x), static_cast<int>(worldPositions[1].y), static_cast<int>(worldPositions[2].x), static_cast<int>(worldPositions[2].y), WHITE);
+		}
 
 		///
 		/// ↑描画処理ここまで
@@ -189,9 +228,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #ifdef _DEBUG
 
 		ImGui::Begin("Window");
-		ImGui::DragFloat3("ControlPoints[0]", &controlPoints[0].x, 0.01f);
-		ImGui::DragFloat3("ControlPoints[1]", &controlPoints[1].x, 0.01f);
-		ImGui::DragFloat3("ControlPoints[2]", &controlPoints[2].x, 0.01f);
+		ImGui::DragFloat3("translates[0]", &translates[0].x, 0.01f);
+		ImGui::DragFloat3("rotates[0]", &rotates[0].x, 0.01f);
+		ImGui::DragFloat3("scales[0]", &scales[0].x, 0.01f);
+
+		ImGui::DragFloat3("translates[1]", &translates[1].x, 0.01f);
+		ImGui::DragFloat3("rotates[1]", &rotates[1].x, 0.01f);
+		ImGui::DragFloat3("scales[1]", &scales[1].x, 0.01f);
+
+		ImGui::DragFloat3("translates[2]", &translates[2].x, 0.01f);
+		ImGui::DragFloat3("rotates[2]", &rotates[2].x, 0.01f);
+		ImGui::DragFloat3("scales[2]", &scales[2].x, 0.01f);
 		ImGui::End();
 
 		Novice::ScreenPrintf(10, 10, "Mouse Right Drag : Camera Rotate");
@@ -388,7 +435,7 @@ bool IsCollision(const AABB& aabb, const Segment& segment) {
 	float tyMax = (aabb.max.y - segment.origin.y) / segment.diff.y;
 	float tzMin = (aabb.min.z - segment.origin.z) / segment.diff.z;
 	float tzMax = (aabb.max.z - segment.origin.z) / segment.diff.z;
-	
+
 	float tNearX = (std::min)(txMin, txMax);
 	float tNearY = (std::min)(tyMin, tyMax);
 	float tNearZ = (std::min)(tzMin, tzMax);
@@ -487,7 +534,7 @@ Vector3 Bezier(const Vector3& p0, const Vector3& p1, const Vector3& p2, float t)
 
 void DrawBezier(const Vector3& controlPoint0, const Vector3& controlPoint1, const Vector3& controlPoint2, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
 	int segments = 32;
-	
+
 	for (int i = 0; i < segments; i++) {
 		float t0 = i / static_cast<float>(segments);
 		float t1 = (i + 1) / static_cast<float>(segments);
@@ -499,6 +546,5 @@ void DrawBezier(const Vector3& controlPoint0, const Vector3& controlPoint1, cons
 		bezier1 = Vector3::Transform(Vector3::Transform(bezier1, viewProjectionMatrix), viewportMatrix);
 
 		Novice::DrawLine(static_cast<int>(bezier0.x), static_cast<int>(bezier0.y), static_cast<int>(bezier1.x), static_cast<int>(bezier1.y), color);
-		
 	}
 }
