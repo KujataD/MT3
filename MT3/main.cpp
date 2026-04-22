@@ -67,10 +67,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	const float kRotateSpeed = 0.0025f;
 	const float kMoveSpeed = 0.1f;
 
-	Plane plane;
-	plane.normal = {0.0f, 1.0f, 0.0f};
-	plane.distance = 1.0f;
-
 	Segment segment;
 	segment.origin = {-0.5f, 0.5f, 0.8f};
 	segment.diff = {1.0f, 0.5f, 0.8f};
@@ -175,10 +171,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 #ifdef _DEBUG
 
 		ImGui::Begin("Window");
-		ImGui::DragFloat3("Plane.Normal", &plane.normal.x, 0.01f);
-		ImGui::DragFloat("Plane.Distance", &plane.distance, 0.01f);
 		ImGui::DragFloat3("Segment.Origin", &segment.origin.x, 0.01f);
 		ImGui::DragFloat3("Segment.Diff", &segment.diff.x, 0.01f);
+		ImGui::DragFloat3("triangle.vertex[0]", &triangle.vertices[0].x, 0.01f);
+		ImGui::DragFloat3("triangle.vertex[1]", &triangle.vertices[1].x, 0.01f);
+		ImGui::DragFloat3("triangle.vertex[2]", &triangle.vertices[2].x, 0.01f);
 		ImGui::End();
 
 		Novice::ScreenPrintf(10, 10, "Mouse Right Drag : Camera Rotate");
