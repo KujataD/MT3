@@ -5,6 +5,7 @@
 #include "Vector3.h"
 #include <cmath>
 #include <imgui.h>
+#include <utility>
 
 const char kWindowTitle[] = "LE2B_04_オオツカ_ダイチ_MT3";
 
@@ -21,20 +22,16 @@ struct AABB {
 	Vector3 min;
 	Vector3 max;
 
+	
 	void SwapMinMax() {
 		if (min.x > max.x) {
-			min.x = (std::min)(min.x, max.x);
-			max.x = (std::max)(min.x, max.x);
+			std::swap(min.x, max.x);
 		}
-
 		if (min.y > max.y) {
-			min.y = (std::min)(min.y, max.y);
-			max.y = (std::max)(min.y, max.y);
+			std::swap(min.y, max.y);
 		}
-
 		if (min.z > max.z) {
-			min.z = (std::min)(min.z, max.z);
-			max.z = (std::max)(min.z, max.z);
+			std::swap(min.z, max.z);
 		}
 	}
 };
