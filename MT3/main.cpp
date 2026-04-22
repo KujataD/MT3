@@ -73,9 +73,6 @@ Vector3 Bezier(const Vector3& p0, const Vector3& p1, const Vector3& p2, float t)
 
 void DrawBezier(const Vector3& controlPoint0, const Vector3& controlPoint1, const Vector3& controlPoint2, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
-// 確認課題 03_01
-// ------------------------------------------------------------------
-
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
@@ -99,25 +96,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	const float kRotateSpeed = 0.0025f;
 	const float kMoveSpeed = 0.1f;
 
-	// 課題 03_01
+	// 課題 03_02
 	// ----------------------------------------------------
-	Vector3 translates[3] = {
-	    {0.2f, 1.0f, 0.0f},
-	    {0.4f, 0.0f, 0.0f},
-	    {0.3f, 0.0f, 0.0f},
-	};
-
-	Vector3 rotates[3] = {
-	    {0.0f, 0.0f, -6.8f},
-	    {0.0f, 0.0f, -1.4f},
-	    {0.0f, 0.0f, 0.0f },
-	};
-
-	Vector3 scales[3] = {
-	    {1.0f, 1.0f, 1.0f},
-        {1.0f, 1.0f, 1.0f},
-        {1.0f, 1.0f, 1.0f}
-    };
+	Vector3 a{0.2f, 1.0f, 0.0f};
+	Vector3 b{2.4f, 3.1f, 1.2f};
+	Vector3 c = a + b;
+	Vector3 d = a - b;
+	Vector3 e = a * 2.4f;
+	Vector3 rotate{0.4f, 1.43f, -0.8f};
+	Matrix4x4 rotateXMatrix = Matrix4x4::MakeRotateXMatrix(rotate.x);
+	Matrix4x4 rotateYMatrix = Matrix4x4::MakeRotateYMatrix(rotate.y);
+	Matrix4x4 rotateZMatrix = Matrix4x4::MakeRotateZMatrix(rotate.z);
+	Matrix4x4 rotateMatrix = rotateXMatrix * rotateYMatrix * rotateZMatrix;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -175,20 +165,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 viewProjectionMatrix = viewMatrix * projectionMatrix;
 		Matrix4x4 viewportMatrix = Matrix4x4::MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
-		// 課題 03_01
-		// ------------------------------------------------
-
-		Matrix4x4 localMatrix[3];
-		Matrix4x4 worldMatrix[3];
-
-		for (int i = 0; i < 3; i++) {
-			localMatrix[i] = Matrix4x4::MakeAffineMatrix(scales[i], rotates[i], translates[i]);
-		}
-
-		worldMatrix[0] = localMatrix[0];
-		worldMatrix[1] = localMatrix[1] * worldMatrix[0];
-		worldMatrix[2] = localMatrix[2] * worldMatrix[1];
-
 		///
 		/// ↑更新処理ここまで
 		///
@@ -198,24 +174,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
-
-		{
-			Vector3 worldPositions[3];
-			Matrix4x4 mvps[3];
-			for (int i = 0; i < 3; i++) {
-				worldPositions[i] = {worldMatrix[i].m[3][0], worldMatrix[i].m[3][1], worldMatrix[i].m[3][2]};
-				mvps[i] = worldMatrix[i] * viewProjectionMatrix;
-			}
-			DrawSphere({worldPositions[0], 0.1f}, viewProjectionMatrix, viewportMatrix, 0xFF0000FF);
-			DrawSphere({worldPositions[1], 0.1f}, viewProjectionMatrix, viewportMatrix, 0x00FF00FF);
-			DrawSphere({worldPositions[2], 0.1f}, viewProjectionMatrix, viewportMatrix, 0x0000FFFF);
-
-			for (int i = 0; i < 3; i++) {
-				worldPositions[i] = Vector3::Transform(Vector3::Transform(worldPositions[i], viewProjectionMatrix), viewportMatrix);
-			}
-			Novice::DrawLine(static_cast<int>(worldPositions[0].x), static_cast<int>(worldPositions[0].y), static_cast<int>(worldPositions[1].x), static_cast<int>(worldPositions[1].y), WHITE);
-			Novice::DrawLine(static_cast<int>(worldPositions[1].x), static_cast<int>(worldPositions[1].y), static_cast<int>(worldPositions[2].x), static_cast<int>(worldPositions[2].y), WHITE);
-		}
 
 		///
 		/// ↑描画処理ここまで
@@ -227,18 +185,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 #ifdef _DEBUG
 
-		ImGui::Begin("Window");
-		ImGui::DragFloat3("translates[0]", &translates[0].x, 0.01f);
-		ImGui::DragFloat3("rotates[0]", &rotates[0].x, 0.01f);
-		ImGui::DragFloat3("scales[0]", &scales[0].x, 0.01f);
-
-		ImGui::DragFloat3("translates[1]", &translates[1].x, 0.01f);
-		ImGui::DragFloat3("rotates[1]", &rotates[1].x, 0.01f);
-		ImGui::DragFloat3("scales[1]", &scales[1].x, 0.01f);
-
-		ImGui::DragFloat3("translates[2]", &translates[2].x, 0.01f);
-		ImGui::DragFloat3("rotates[2]", &rotates[2].x, 0.01f);
-		ImGui::DragFloat3("scales[2]", &scales[2].x, 0.01f);
+		ImGui ::Begin("Window");
+		ImGui::Text("c:%f, %f, %f", c.x, c.y, c.z);
+		ImGui::Text("d:%f, %f, %f", d.x, d.y, d.z);
+		ImGui::Text("e:%f, %f, %f", e.x, e.y, e.z);
+		ImGui::Text(
+		    "matrix:\n%f, %f, %f, %f\n%f, %f, %f, %f\n%f, %f, %f, %f\n%f, %f, %f, %f\n", 
+			rotateMatrix.m[0][0], rotateMatrix.m[0][1], rotateMatrix.m[0][2], rotateMatrix.m[0][3],
+			rotateMatrix.m[1][0], rotateMatrix.m[1][1], rotateMatrix.m[1][2], rotateMatrix.m[1][3],
+			rotateMatrix.m[2][0], rotateMatrix.m[2][1], rotateMatrix.m[2][2], rotateMatrix.m[2][3], 
+			rotateMatrix.m[3][0], rotateMatrix.m[3][1], rotateMatrix.m[3][2], rotateMatrix.m[3][3]);
 		ImGui::End();
 
 		Novice::ScreenPrintf(10, 10, "Mouse Right Drag : Camera Rotate");
