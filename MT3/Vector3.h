@@ -18,6 +18,8 @@ public:
 	Vector3 operator*(float scalar) const { return {x * scalar, y * scalar, z * scalar}; }
 	Vector3 operator/(float scalar) const { return {x / scalar, y / scalar, z / scalar}; }
 
+	Vector3 operator-() const { return Vector3{-x, -y, -z}; }
+
 	void operator+=(const Vector3& v) {
 		x += v.x;
 		y += v.y;

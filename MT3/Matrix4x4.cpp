@@ -62,12 +62,11 @@ Matrix4x4 Matrix4x4::operator*(const Matrix4x4& other) const {
 	            this->m[0][0] * other.m[0][1] + this->m[0][1] * other.m[1][1] + this->m[0][2] * other.m[2][1] + this->m[0][3] * other.m[3][1],
 	            this->m[0][0] * other.m[0][2] + this->m[0][1] * other.m[1][2] + this->m[0][2] * other.m[2][2] + this->m[0][3] * other.m[3][2],
 	            this->m[0][0] * other.m[0][3] + this->m[0][1] * other.m[1][3] + this->m[0][2] * other.m[2][3] + this->m[0][3] * other.m[3][3],
-	        }, {
-				this->m[1][0] * other.m[0][0] + this->m[1][1] * other.m[1][0] + this->m[1][2] * other.m[2][0] + this->m[1][3] * other.m[3][0],
-				this->m[1][0] * other.m[0][1] + this->m[1][1] * other.m[1][1] + this->m[1][2] * other.m[2][1] + this->m[1][3] * other.m[3][1],
-				this->m[1][0] * other.m[0][2] + this->m[1][1] * other.m[1][2] + this->m[1][2] * other.m[2][2] + this->m[1][3] * other.m[3][2],
-				this->m[1][0] * other.m[0][3] + this->m[1][1] * other.m[1][3] + this->m[1][2] * other.m[2][3] + this->m[1][3] * other.m[3][3]
-			}, {
+	        }, {this->m[1][0] * other.m[0][0] + this->m[1][1] * other.m[1][0] + this->m[1][2] * other.m[2][0] + this->m[1][3] * other.m[3][0],
+	         this->m[1][0] * other.m[0][1] + this->m[1][1] * other.m[1][1] + this->m[1][2] * other.m[2][1] + this->m[1][3] * other.m[3][1],
+	         this->m[1][0] * other.m[0][2] + this->m[1][1] * other.m[1][2] + this->m[1][2] * other.m[2][2] + this->m[1][3] * other.m[3][2],
+	         this->m[1][0] * other.m[0][3] + this->m[1][1] * other.m[1][3] + this->m[1][2] * other.m[2][3] + this->m[1][3] * other.m[3][3]},
+         {
 	            this->m[2][0] * other.m[0][0] + this->m[2][1] * other.m[1][0] + this->m[2][2] * other.m[2][0] + this->m[2][3] * other.m[3][0],
 	            this->m[2][0] * other.m[0][1] + this->m[2][1] * other.m[1][1] + this->m[2][2] * other.m[2][1] + this->m[2][3] * other.m[3][1],
 	            this->m[2][0] * other.m[0][2] + this->m[2][1] * other.m[1][2] + this->m[2][2] * other.m[2][2] + this->m[2][3] * other.m[3][2],
@@ -204,35 +203,46 @@ Matrix4x4 Matrix4x4::MakeScaleMatrix(const Vector3& scale) {
 
 Matrix4x4 Matrix4x4::MakeRotateXMatrix(float radian) {
 	return {
-	    {
-			{1.0f,0.0f, 0.0f, 0.0f}, 
-			{0.0f, std::cos(radian), std::sin(radian), 0.0f}, 
-			{0.0f, -std::sin(radian), std::cos(radian), 0.0f}, 
-			{0.0f, 0.0f, 0.0f, 1.0f}
-		}
+	    {{1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, std::cos(radian), std::sin(radian), 0.0f}, {0.0f, -std::sin(radian), std::cos(radian), 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}}
     };
 }
 
 Matrix4x4 Matrix4x4::MakeRotateYMatrix(float radian) {
 	return {
-	    {
-			{std::cos(radian), 0.0f, -std::sin(radian), 0.0f}, 
-			{0.0f, 1.0f,0.0f, 0.0f}, 
-			{std::sin(radian), 0.0f, std::cos(radian), 0.0f}, 
-			{0.0f, 0.0f, 0.0f, 1.0f}
-		}
+	    {{std::cos(radian), 0.0f, -std::sin(radian), 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {std::sin(radian), 0.0f, std::cos(radian), 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}}
     };
 }
 
-Matrix4x4 Matrix4x4::MakeRotateZMatrix(float radian) { 
+Matrix4x4 Matrix4x4::MakeRotateZMatrix(float radian) {
 	return {
-	    {
-			{std::cos(radian),std::sin(radian), 0.0f, 0.0f}, 
-			{-std::sin(radian), std::cos(radian), 0.0f, 0.0f}, 
-			{0.0f, 0.0f, 1.0f, 0.0f}, 
-			{0.0f, 0.0f, 0.0f, 1.0f}
-		}
+	    {{std::cos(radian), std::sin(radian), 0.0f, 0.0f}, {-std::sin(radian), std::cos(radian), 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f}}
     };
+}
+
+Matrix4x4 Matrix4x4::MakeAffineMatrixOrientations(const Vector3 orientations[3], const Vector3& translate) {
+	Matrix4x4 m{};
+
+	m.m[0][0] = orientations[0].x;
+	m.m[1][0] = orientations[0].y;
+	m.m[2][0] = orientations[0].z;
+	m.m[3][0] = translate.x;
+
+	m.m[0][1] = orientations[1].x;
+	m.m[1][1] = orientations[1].y;
+	m.m[2][1] = orientations[1].z;
+	m.m[3][1] = translate.y;
+
+	m.m[0][2] = orientations[2].x;
+	m.m[1][2] = orientations[2].y;
+	m.m[2][2] = orientations[2].z;
+	m.m[3][2] = translate.z;
+
+	m.m[0][3] = 0.0f;
+	m.m[1][3] = 0.0f;
+	m.m[2][3] = 0.0f;
+	m.m[3][3] = 1.0f;
+
+	return m;
 }
 
 Matrix4x4 Matrix4x4::MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate) {
@@ -243,26 +253,22 @@ Matrix4x4 Matrix4x4::MakeAffineMatrix(const Vector3& scale, const Vector3& rotat
 	return w;
 }
 
-Matrix4x4 Matrix4x4::MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip, float farClip) { 
+Matrix4x4 Matrix4x4::MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip, float farClip) {
 	return {
-		{
-			{(1.0f / std::tan(fovY / 2.0f)) / aspectRatio, 0.0f, 0.0f, 0.0f},
-			{0.0f, (1.0f / std::tan(fovY / 2.0f)), 0.0f, 0.0f},
-			{0.0f, 0.0f, farClip / (farClip - nearClip), 1.0f},
-			{0.0f, 0.0f, -nearClip * farClip / (farClip - nearClip) , 0.0f}
-		}
-	};
+	    {{(1.0f / std::tan(fovY / 2.0f)) / aspectRatio, 0.0f, 0.0f, 0.0f},
+	     {0.0f, (1.0f / std::tan(fovY / 2.0f)), 0.0f, 0.0f},
+	     {0.0f, 0.0f, farClip / (farClip - nearClip), 1.0f},
+	     {0.0f, 0.0f, -nearClip * farClip / (farClip - nearClip), 0.0f}}
+    };
 }
 
 Matrix4x4 Matrix4x4::MakeOrthographicMatrix(float left, float top, float right, float bottom, float nearClip, float farClip) {
 	return {
-	    {
-			{2.0f / (right - left), 0.0f, 0.0f, 0.0f},
-		    {0.0f, 2.0f / (top - bottom), 0.0f, 0.0f},
-		    {0.0f, 0.0f, 1.0f / (farClip - nearClip), 0.0f}, 
-			{(left + right) / (left - right), (top + bottom) / (bottom - top), nearClip / (nearClip  - farClip), 1.0f}
-		}
-	};
+	    {{2.0f / (right - left), 0.0f, 0.0f, 0.0f},
+	     {0.0f, 2.0f / (top - bottom), 0.0f, 0.0f},
+	     {0.0f, 0.0f, 1.0f / (farClip - nearClip), 0.0f},
+	     {(left + right) / (left - right), (top + bottom) / (bottom - top), nearClip / (nearClip - farClip), 1.0f}}
+    };
 }
 
 Matrix4x4 Matrix4x4::MakeViewportMatrix(float left, float top, float width, float height, float minDepth, float maxDepth) {
@@ -273,11 +279,6 @@ Matrix4x4 Matrix4x4::MakeViewportMatrix(float left, float top, float width, floa
 	}
 
 	return {
-	    {
-			{width / 2.0f, 0.0f, 0.0f, 0.0f},
-			{0.0f, -(height / 2.0f), 0.0f, 0.0f},
-			{0.0f, 0.0f, maxDepth - minDepth, 0.0f}, 
-			{left + (width / 2.0f), top + (height / 2.0f), minDepth, 1.0f}
-		}
-	};
+	    {{width / 2.0f, 0.0f, 0.0f, 0.0f}, {0.0f, -(height / 2.0f), 0.0f, 0.0f}, {0.0f, 0.0f, maxDepth - minDepth, 0.0f}, {left + (width / 2.0f), top + (height / 2.0f), minDepth, 1.0f}}
+    };
 }

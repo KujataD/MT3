@@ -5,6 +5,7 @@
 #include "Vector3.h"
 #include <cmath>
 #include <imgui.h>
+#include <utility>
 
 const char kWindowTitle[] = "LE2B_04_オオツカ_ダイチ_MT3";
 
@@ -23,19 +24,39 @@ struct AABB {
 
 	void SwapMinMax() {
 		if (min.x > max.x) {
-			min.x = (std::min)(min.x, max.x);
-			max.x = (std::max)(min.x, max.x);
+			std::swap(min.x, max.x);
 		}
-
 		if (min.y > max.y) {
-			min.y = (std::min)(min.y, max.y);
-			max.y = (std::max)(min.y, max.y);
+			std::swap(min.y, max.y);
 		}
-
 		if (min.z > max.z) {
-			min.z = (std::min)(min.z, max.z);
-			max.z = (std::max)(min.z, max.z);
+			std::swap(min.z, max.z);
 		}
+	}
+};
+
+struct OBB {
+	Vector3 center;
+	Vector3 orientations[3];
+	Vector3 size;
+
+	Matrix4x4 GetWorldMatrix() const { return Matrix4x4::MakeAffineMatrixOrientations(orientations, center); }
+	void UpdateOBBOrientations(const Vector3& rotate) {
+		// 回転行列を生成
+		Matrix4x4 rotateMatrix = Matrix4x4::MakeRotateZMatrix(rotate.z) * Matrix4x4::MakeRotateYMatrix(rotate.y) * Matrix4x4::MakeRotateXMatrix(rotate.x);
+
+		// 回転行列から軸を抽出
+		orientations[0].x = rotateMatrix.m[0][0];
+		orientations[0].y = rotateMatrix.m[0][1];
+		orientations[0].z = rotateMatrix.m[0][2];
+
+		orientations[1].x = rotateMatrix.m[1][0];
+		orientations[1].y = rotateMatrix.m[1][1];
+		orientations[1].z = rotateMatrix.m[1][2];
+
+		orientations[2].x = rotateMatrix.m[2][0];
+		orientations[2].y = rotateMatrix.m[2][1];
+		orientations[2].z = rotateMatrix.m[2][2];
 	}
 };
 
@@ -71,7 +92,6 @@ struct ConicalPendulum {
 	float angularVelocity;
 };
 
-
 void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
 
 void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label);
@@ -91,6 +111,7 @@ bool IsCollision(const AABB& aabb1, const AABB& aabb2);
 bool IsCollision(const AABB& aabb, const Sphere& sphere);
 
 bool IsCollision(const AABB& aabb, const Segment& segment);
+bool IsCollision(const OBB& obb, const Sphere& sphere);
 
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
@@ -101,6 +122,7 @@ void DrawLine(const Vector3& v1, const Vector3& v2, const Matrix4x4& viewProject
 void DrawTriangle(const Triangle& triangle, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
 void DrawAABB(const AABB& aabb, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
+void DrawOBB(const OBB& obb, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
 Vector3 Lerp(const Vector3& v1, const Vector3 v2, float t);
 
@@ -115,7 +137,6 @@ void CircularMotion(Vector3& p, const Vector3& center, float& angle, float angul
 // 課題 04_04
 // --------------------------------------------------------
 Vector3 Reflect(const Vector3& input, const Vector3& normal);
-
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
@@ -140,23 +161,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	const float kRotateSpeed = 0.0025f;
 	const float kMoveSpeed = 0.1f;
 
-	float deltaTime = 1.0f / 60.0f;
-	float e = 0.8f;
-
-	// 課題 04_04
+	// 課題02_08
 	// ----------------------------------------------------
-	
-	Plane plane;
-	plane.normal = Vector3::Normalize({-0.2f, 0.9f, -0.3f});
-	plane.distance = 0.0f;
 
-	Ball ball{};
-	ball.position = {0.8f, 1.2f, 0.3f};
-	ball.mass = 2.0f;
-	ball.radius = 0.05f;
-	ball.color = WHITE;
-	ball.acceleration = {0.0f, -9.8f, 0.0f};
-	
+	Vector3 rotate{0.0f, 0.0f, 0.0f};
+	OBB obb{
+	    .center{-1.0f,              0.0f,               0.0f              },
+        .orientations = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+        .size{0.5f,               0.5f,               0.5f              }
+    };
+
+	Sphere sphere{
+	    .center{0.0f, 0.0f, 0.0f},
+        .radius{0.5f}
+    };
+
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
 		// フレームの開始
@@ -206,24 +225,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 		}
 
+		obb.UpdateOBBOrientations(rotate);
+
 		// 各種行列の計算
 		Matrix4x4 cameraMatrix = Matrix4x4::MakeAffineMatrix({1.0f, 1.0f, 1.0f}, cameraRotate, cameraTranslate);
 		Matrix4x4 viewMatrix = Matrix4x4::Inverse(cameraMatrix);
 		Matrix4x4 projectionMatrix = Matrix4x4::MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
 		Matrix4x4 viewProjectionMatrix = viewMatrix * projectionMatrix;
 		Matrix4x4 viewportMatrix = Matrix4x4::MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
-
-		// 円錐振り子運動の計算
-	
-		ball.velocity += ball.acceleration * deltaTime;
-		ball.position += ball.velocity * deltaTime;
-
-		if (IsCollision(Sphere{ball.position, ball.radius}, plane)) {
-			Vector3 reflected = Reflect(ball.velocity, plane.normal);
-			Vector3 projectToNormal = Vector3::Project(reflected, plane.normal);
-			Vector3 movingDirection = reflected - projectToNormal;
-			ball.velocity = projectToNormal * e + movingDirection;
-		}
 
 		///
 		/// ↑更新処理ここまで
@@ -234,8 +243,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
-		DrawPlane(plane, viewProjectionMatrix, viewportMatrix, WHITE);
-		DrawSphere({ball.position, ball.radius}, viewProjectionMatrix, viewportMatrix, WHITE);
+
+		if (IsCollision(obb, sphere)) {
+			DrawOBB(obb, viewProjectionMatrix, viewportMatrix, RED);
+		} else {
+			DrawOBB(obb, viewProjectionMatrix, viewportMatrix, WHITE);
+		}
+
+		DrawSphere(sphere, viewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -247,11 +262,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 #ifdef _DEBUG
 
-		ImGui ::Begin("Window");
-		if (ImGui::Button("Start")) {
-			ball.position = {0.8f, 1.2f, 0.3f};
-			ball.velocity = {0.0f, 0.0f, 0.0f};
-		}
+		ImGui::Begin("Window");
+
+		ImGui::DragFloat3("obb.size", &obb.size.x, 0.01f);
+		ImGui::DragFloat3("obb.rotate", &rotate.x, 0.01f);
+		ImGui::DragFloat3("obb.center", &obb.center.x, 0.01f);
+		ImGui::DragFloat("sphere.radius", &sphere.radius, 0.01f);
+		ImGui::DragFloat3("sphere.center", &sphere.center.x, 0.01f);
+
 		ImGui::End();
 
 		Novice::ScreenPrintf(10, 10, "Mouse Right Drag : Camera Rotate");
@@ -467,6 +485,17 @@ bool IsCollision(const AABB& aabb, const Segment& segment) {
 	return false;
 }
 
+bool IsCollision(const OBB& obb, const Sphere& sphere) {
+	Matrix4x4 obbWorldMatrix = obb.GetWorldMatrix();
+	Matrix4x4 obbWorldMatrixInverse = Matrix4x4::Inverse(obbWorldMatrix);
+	Vector3 centerInOBBLocalSpace = Vector3::Transform(sphere.center, obbWorldMatrixInverse);
+
+	AABB aabbOBBLocal{.min = -obb.size, .max = obb.size};
+	Sphere sphereOBBLocal{centerInOBBLocalSpace, sphere.radius};
+	// ローカル空間で衝突判定
+	return IsCollision(aabbOBBLocal, sphereOBBLocal);
+}
+
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
 	Vector3 center = plane.normal * plane.distance;
 	Vector3 perpendiculars[4];
@@ -519,6 +548,40 @@ void DrawAABB(const AABB& aabb, const Matrix4x4& viewProjectionMatrix, const Mat
 	vertices[7] = {aabb.min.x, aabb.max.y, aabb.max.z};
 
 	for (int32_t i = 0; i < 8; ++i) {
+		vertices[i] = Vector3::Transform(Vector3::Transform(vertices[i], viewProjectionMatrix), viewportMatrix);
+	}
+
+	Novice::DrawLine(static_cast<int>(vertices[0].x), static_cast<int>(vertices[0].y), static_cast<int>(vertices[1].x), static_cast<int>(vertices[1].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[1].x), static_cast<int>(vertices[1].y), static_cast<int>(vertices[2].x), static_cast<int>(vertices[2].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[2].x), static_cast<int>(vertices[2].y), static_cast<int>(vertices[3].x), static_cast<int>(vertices[3].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[3].x), static_cast<int>(vertices[3].y), static_cast<int>(vertices[0].x), static_cast<int>(vertices[0].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[4].x), static_cast<int>(vertices[4].y), static_cast<int>(vertices[5].x), static_cast<int>(vertices[5].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[5].x), static_cast<int>(vertices[5].y), static_cast<int>(vertices[6].x), static_cast<int>(vertices[6].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[6].x), static_cast<int>(vertices[6].y), static_cast<int>(vertices[7].x), static_cast<int>(vertices[7].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[7].x), static_cast<int>(vertices[7].y), static_cast<int>(vertices[4].x), static_cast<int>(vertices[4].y), color);
+
+	Novice::DrawLine(static_cast<int>(vertices[0].x), static_cast<int>(vertices[0].y), static_cast<int>(vertices[4].x), static_cast<int>(vertices[4].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[1].x), static_cast<int>(vertices[1].y), static_cast<int>(vertices[5].x), static_cast<int>(vertices[5].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[2].x), static_cast<int>(vertices[2].y), static_cast<int>(vertices[6].x), static_cast<int>(vertices[6].y), color);
+	Novice::DrawLine(static_cast<int>(vertices[3].x), static_cast<int>(vertices[3].y), static_cast<int>(vertices[7].x), static_cast<int>(vertices[7].y), color);
+}
+
+void DrawOBB(const OBB& obb, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+	Vector3 vertices[8] = {
+	    {-obb.size.x, -obb.size.y, -obb.size.z},
+        {obb.size.x,  -obb.size.y, -obb.size.z},
+        {obb.size.x,  obb.size.y,  -obb.size.z},
+        {-obb.size.x, obb.size.y,  -obb.size.z},
+	    {-obb.size.x, -obb.size.y, obb.size.z },
+        {obb.size.x,  -obb.size.y, obb.size.z },
+        {obb.size.x,  obb.size.y,  obb.size.z },
+        {-obb.size.x, obb.size.y,  obb.size.z },
+	};
+
+	Matrix4x4 worldMatrix = obb.GetWorldMatrix();
+
+	for (int32_t i = 0; i < 8; ++i) {
+		vertices[i] = Vector3::Transform(vertices[i], worldMatrix);
 		vertices[i] = Vector3::Transform(Vector3::Transform(vertices[i], viewProjectionMatrix), viewportMatrix);
 	}
 
