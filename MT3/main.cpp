@@ -45,18 +45,9 @@ struct OBB {
 		// 回転行列を生成
 		Matrix4x4 rotateMatrix = Matrix4x4::MakeRotateZMatrix(rotate.z) * Matrix4x4::MakeRotateYMatrix(rotate.y) * Matrix4x4::MakeRotateXMatrix(rotate.x);
 
-		// 回転行列から軸を抽出
-		orientations[0].x = rotateMatrix.m[0][0];
-		orientations[0].y = rotateMatrix.m[0][1];
-		orientations[0].z = rotateMatrix.m[0][2];
-
-		orientations[1].x = rotateMatrix.m[1][0];
-		orientations[1].y = rotateMatrix.m[1][1];
-		orientations[1].z = rotateMatrix.m[1][2];
-
-		orientations[2].x = rotateMatrix.m[2][0];
-		orientations[2].y = rotateMatrix.m[2][1];
-		orientations[2].z = rotateMatrix.m[2][2];
+		orientations[0] = {rotateMatrix.m[0][0], rotateMatrix.m[0][1], rotateMatrix.m[0][2]};
+		orientations[1] = {rotateMatrix.m[1][0], rotateMatrix.m[1][1], rotateMatrix.m[1][2]};
+		orientations[2] = {rotateMatrix.m[2][0], rotateMatrix.m[2][1], rotateMatrix.m[2][2]};
 	}
 };
 
