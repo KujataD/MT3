@@ -46,17 +46,13 @@ struct OBB {
 		Matrix4x4 rotateMatrix = Matrix4x4::MakeRotateZMatrix(rotate.z) * Matrix4x4::MakeRotateYMatrix(rotate.y) * Matrix4x4::MakeRotateXMatrix(rotate.x);
 
 		// 回転行列から軸を抽出
-		orientations[0].x = rotateMatrix.m[0][0];
-		orientations[0].y = rotateMatrix.m[0][1];
-		orientations[0].z = rotateMatrix.m[0][2];
+		orientations[0] = {rotateMatrix.m[0][0], rotateMatrix.m[1][0], rotateMatrix.m[2][0]}; 
+		orientations[1] = {rotateMatrix.m[0][1], rotateMatrix.m[1][1], rotateMatrix.m[2][1]}; 
+		orientations[2] = {rotateMatrix.m[0][2], rotateMatrix.m[1][2], rotateMatrix.m[2][2]}; 
 
-		orientations[1].x = rotateMatrix.m[1][0];
-		orientations[1].y = rotateMatrix.m[1][1];
-		orientations[1].z = rotateMatrix.m[1][2];
-
-		orientations[2].x = rotateMatrix.m[2][0];
-		orientations[2].y = rotateMatrix.m[2][1];
-		orientations[2].z = rotateMatrix.m[2][2];
+		orientations[0] = Vector3::Normalize(orientations[0]);
+		orientations[1] = Vector3::Normalize(orientations[1]);
+		orientations[2] = Vector3::Normalize(orientations[2]);
 	}
 };
 
@@ -120,6 +116,7 @@ bool IsCollision(const OBB& obb, const Sphere& sphere);
 bool IsCollision(const OBB& obb, const Segment& segment);
 bool IsCollision(const OBB& obb, const Line& line);
 bool IsCollision(const OBB& obb, const Ray& ray);
+bool IsCollision(const OBB& obb1, const OBB& obb2);
 
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
@@ -142,8 +139,11 @@ void BallSpring(Ball& ball, Spring& spring, float deltaTime = 1.0f / 60.0f);
 
 void CircularMotion(Vector3& p, const Vector3& center, float& angle, float angularVelocity, float radius, float deltaTime = 1.0f / 60.0f);
 
-// 課題 04_04
-// --------------------------------------------------------
+/// <summary>
+/// 軸が重なっているかどうか
+/// </summary>
+bool IsOverlappingOnAxis(const OBB& A, const OBB& B, const Vector3& axis);
+
 Vector3 Reflect(const Vector3& input, const Vector3& normal);
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -171,17 +171,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// 課題02_08
 	// ----------------------------------------------------
-
-	Vector3 rotate{0.0f, 0.0f, 0.0f};
-	OBB obb{
-	    .center{-1.0f,              0.0f,               0.0f              },
-        .orientations = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-        .size{0.5f,               0.5f,               0.5f              }
+	Vector3 rotate1{0.0f, 0.0f, 0.0f};
+	Vector3 rotate2{-0.05f, -2.49f, 0.15f};
+	OBB obb1{
+	    .center = {0.0f,               0.0f,               0.0f              },
+          .orientations = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+          .size = {0.83f,              0.26f,              0.24f             }
     };
-
-	Segment segment{
-	    .origin{-0.8f, -0.3f, 0.0f},
-        .diff{0.5f,  0.5f,  0.5f}
+	OBB obb2{
+	    .center = {0.9f,               0.66f,              0.78f             },
+          .orientations = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+          .size = {0.5f,               0.37f,              0.5f              }
     };
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -233,7 +233,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 		}
 
-		obb.UpdateOBBOrientations(rotate);
+		obb1.UpdateOBBOrientations(rotate1);
+		obb2.UpdateOBBOrientations(rotate2);
 
 		// 各種行列の計算
 		Matrix4x4 cameraMatrix = Matrix4x4::MakeAffineMatrix({1.0f, 1.0f, 1.0f}, cameraRotate, cameraTranslate);
@@ -252,13 +253,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
 
-		if (IsCollision(obb, segment)) {
-			DrawOBB(obb, viewProjectionMatrix, viewportMatrix, RED);
+		if (IsCollision(obb1, obb2)) {
+			DrawOBB(obb1, viewProjectionMatrix, viewportMatrix, RED);
 		} else {
-			DrawOBB(obb, viewProjectionMatrix, viewportMatrix, WHITE);
+			DrawOBB(obb1, viewProjectionMatrix, viewportMatrix, WHITE);
 		}
-
-		DrawSegment(segment, viewProjectionMatrix, viewportMatrix, WHITE);
+		DrawOBB(obb2, viewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -272,14 +272,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		ImGui::Begin("Window");
 
-		ImGui::DragFloat3("obb.center", &obb.center.x, 0.01f);
-		ImGui::DragFloat3("obb.rotate", &rotate.x, 0.01f);
-		ImGui::DragFloat3("obb.orientations[0]", &obb.orientations[0].x, 0.01f);
-		ImGui::DragFloat3("obb.orientations[1]", &obb.orientations[1].x, 0.01f);
-		ImGui::DragFloat3("obb.orientations[2]", &obb.orientations[2].x, 0.01f);
-		ImGui::DragFloat3("obb.size", &obb.size.x, 0.01f);
-		ImGui::DragFloat3("segment.origin", &segment.origin.x, 0.01f);
-		ImGui::DragFloat3("segment.diff", &segment.diff.x, 0.01f);
+		ImGui::DragFloat3("obb1.center", &obb1.center.x, 0.01f);
+		ImGui::DragFloat3("obb1.rotate", &rotate1.x, 0.01f);
+		ImGui::DragFloat3("obb1.orientations[0]", &obb1.orientations[0].x, 0.01f);
+		ImGui::DragFloat3("obb1.orientations[1]", &obb1.orientations[1].x, 0.01f);
+		ImGui::DragFloat3("obb1.orientations[2]", &obb1.orientations[2].x, 0.01f);
+		ImGui::DragFloat3("obb1.size", &obb1.size.x, 0.01f);
+
+		ImGui::DragFloat3("obb2.center", &obb2.center.x, 0.01f);
+		ImGui::DragFloat3("obb2.rotate", &rotate2.x, 0.01f);
+		ImGui::DragFloat3("obb2.orientations[0]", &obb2.orientations[0].x, 0.01f);
+		ImGui::DragFloat3("obb2.orientations[1]", &obb2.orientations[1].x, 0.01f);
+		ImGui::DragFloat3("obb2.orientations[2]", &obb2.orientations[2].x, 0.01f);
+		ImGui::DragFloat3("obb2.size", &obb2.size.x, 0.01f);
 
 		ImGui::End();
 
@@ -620,6 +625,119 @@ bool IsCollision(const OBB& obb, const Ray& ray) {
 	localRay.origin = localOrigin;
 	localRay.diff = localEnd - localOrigin;
 	return IsCollision(localAABB, localRay);
+}
+
+bool IsOverlappingOnAxis(const OBB& obb1, const OBB& obb2, const Vector3& axis) {
+	// ゼロベクトル判定
+	if (axis.LengthSquared() < 1e-6f) {
+		return true;
+	}
+	Vector3 L = Vector3::Normalize(axis);
+
+	// 基準座標
+	Vector3 origin = obb1.center;
+
+	// Aの射影（Min / Max）
+	float centerA = Vector3::Dot(obb1.center, L);
+
+	float extentA =
+	    std::abs(Vector3::Dot(obb1.orientations[0], L)) * obb1.size.x + std::abs(Vector3::Dot(obb1.orientations[1], L)) * obb1.size.y + std::abs(Vector3::Dot(obb1.orientations[2], L)) * obb1.size.z;
+
+	float min1 = centerA - extentA;
+	float max1 = centerA + extentA;
+
+	// Bの射影（Min / Max）
+	float centerB = Vector3::Dot(obb2.center, L);
+
+	float extentB =
+	    std::abs(Vector3::Dot(obb2.orientations[0], L)) * obb2.size.x + std::abs(Vector3::Dot(obb2.orientations[1], L)) * obb2.size.y + std::abs(Vector3::Dot(obb2.orientations[2], L)) * obb2.size.z;
+
+	float min2 = centerB - extentB;
+	float max2 = centerB + extentB;
+
+	float L1 = max1 - min1;
+	float L2 = max2 - min2;
+
+	// 分離軸判定
+	float sumSpan = L1 + L2;
+	float longSpan = (std::max)(max1, max2) - (std::min)(min1, min2);
+
+	if (sumSpan < longSpan) {
+		return false;
+	}
+
+	return true;
+}
+
+bool IsCollision(const OBB& obb1, const OBB& obb2) {
+	if (!IsOverlappingOnAxis(obb1, obb2, obb1.orientations[0])) {
+		return false;
+	}
+	if (!IsOverlappingOnAxis(obb1, obb2, obb1.orientations[1])) {
+		return false;
+	}
+	if (!IsOverlappingOnAxis(obb1, obb2, obb1.orientations[2])) {
+		return false;
+	}
+
+	if (!IsOverlappingOnAxis(obb1, obb2, obb2.orientations[0])) {
+		return false;
+	}
+	if (!IsOverlappingOnAxis(obb1, obb2, obb2.orientations[1])) {
+		return false;
+	}
+	if (!IsOverlappingOnAxis(obb1, obb2, obb2.orientations[2])) {
+		return false;
+	}
+
+	Vector3 c;
+
+	c = Vector3::Cross(obb1.orientations[0], obb2.orientations[0]);
+	if (!IsOverlappingOnAxis(obb1, obb2, c)) {
+		return false;
+	}
+
+	c = Vector3::Cross(obb1.orientations[0], obb2.orientations[1]);
+	if (!IsOverlappingOnAxis(obb1, obb2, c)) {
+		return false;
+	}
+
+	c = Vector3::Cross(obb1.orientations[0], obb2.orientations[2]);
+	if (!IsOverlappingOnAxis(obb1, obb2, c)) {
+		return false;
+	}
+
+	c = Vector3::Cross(obb1.orientations[1], obb2.orientations[0]);
+	if (!IsOverlappingOnAxis(obb1, obb2, c)) {
+		return false;
+	}
+
+	c = Vector3::Cross(obb1.orientations[1], obb2.orientations[1]);
+	if (!IsOverlappingOnAxis(obb1, obb2, c)) {
+		return false;
+	}
+
+	c = Vector3::Cross(obb1.orientations[1], obb2.orientations[2]);
+	if (!IsOverlappingOnAxis(obb1, obb2, c)) {
+		return false;
+	}
+
+	c = Vector3::Cross(obb1.orientations[2], obb2.orientations[0]);
+	if (!IsOverlappingOnAxis(obb1, obb2, c)) {
+		return false;
+	}
+
+	c = Vector3::Cross(obb1.orientations[2], obb2.orientations[1]);
+	if (!IsOverlappingOnAxis(obb1, obb2, c)) {
+		return false;
+	}
+
+	c = Vector3::Cross(obb1.orientations[2], obb2.orientations[2]);
+	if (!IsOverlappingOnAxis(obb1, obb2, c)) {
+		return false;
+	}
+
+	return true;
 }
 
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
