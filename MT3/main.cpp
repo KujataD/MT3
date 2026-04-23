@@ -111,7 +111,15 @@ bool IsCollision(const AABB& aabb1, const AABB& aabb2);
 bool IsCollision(const AABB& aabb, const Sphere& sphere);
 
 bool IsCollision(const AABB& aabb, const Segment& segment);
+
+bool IsCollision(const AABB& aabb, const Line& line);
+
+bool IsCollision(const AABB& aabb, const Ray& ray);
+
 bool IsCollision(const OBB& obb, const Sphere& sphere);
+bool IsCollision(const OBB& obb, const Segment& segment);
+bool IsCollision(const OBB& obb, const Line& line);
+bool IsCollision(const OBB& obb, const Ray& ray);
 
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
@@ -171,9 +179,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         .size{0.5f,               0.5f,               0.5f              }
     };
 
-	Sphere sphere{
-	    .center{0.0f, 0.0f, 0.0f},
-        .radius{0.5f}
+	Segment segment{
+	    .origin{-0.8f, -0.3f, 0.0f},
+        .diff{0.5f,  0.5f,  0.5f}
     };
 
 	// ウィンドウの×ボタンが押されるまでループ
@@ -244,13 +252,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
 
-		if (IsCollision(obb, sphere)) {
+		if (IsCollision(obb, segment)) {
 			DrawOBB(obb, viewProjectionMatrix, viewportMatrix, RED);
 		} else {
 			DrawOBB(obb, viewProjectionMatrix, viewportMatrix, WHITE);
 		}
 
-		DrawSphere(sphere, viewProjectionMatrix, viewportMatrix, WHITE);
+		DrawSegment(segment, viewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -264,11 +272,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		ImGui::Begin("Window");
 
-		ImGui::DragFloat3("obb.size", &obb.size.x, 0.01f);
-		ImGui::DragFloat3("obb.rotate", &rotate.x, 0.01f);
 		ImGui::DragFloat3("obb.center", &obb.center.x, 0.01f);
-		ImGui::DragFloat("sphere.radius", &sphere.radius, 0.01f);
-		ImGui::DragFloat3("sphere.center", &sphere.center.x, 0.01f);
+		ImGui::DragFloat3("obb.rotate", &rotate.x, 0.01f);
+		ImGui::DragFloat3("obb.orientations[0]", &obb.orientations[0].x, 0.01f);
+		ImGui::DragFloat3("obb.orientations[1]", &obb.orientations[1].x, 0.01f);
+		ImGui::DragFloat3("obb.orientations[2]", &obb.orientations[2].x, 0.01f);
+		ImGui::DragFloat3("obb.size", &obb.size.x, 0.01f);
+		ImGui::DragFloat3("segment.origin", &segment.origin.x, 0.01f);
+		ImGui::DragFloat3("segment.diff", &segment.diff.x, 0.01f);
 
 		ImGui::End();
 
@@ -478,8 +489,69 @@ bool IsCollision(const AABB& aabb, const Segment& segment) {
 	float tmin = (std::max)((std::max)(tNearX, tNearY), tNearZ);
 	// AABBとの衝突点(貫通点)のtが大きい方
 	float tmax = (std::min)((std::min)(tFarX, tFarY), tFarZ);
+
+	// Segment
+	if (tmin <= tmax) {
+		if (tmax >= 0.0f && tmin <= 1.0f) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool IsCollision(const AABB& aabb, const Line& line) {
+	float txMin = (aabb.min.x - line.origin.x) / line.diff.x;
+	float txMax = (aabb.max.x - line.origin.x) / line.diff.x;
+	float tyMin = (aabb.min.y - line.origin.y) / line.diff.y;
+	float tyMax = (aabb.max.y - line.origin.y) / line.diff.y;
+	float tzMin = (aabb.min.z - line.origin.z) / line.diff.z;
+	float tzMax = (aabb.max.z - line.origin.z) / line.diff.z;
+
+	float tNearX = (std::min)(txMin, txMax);
+	float tNearY = (std::min)(tyMin, tyMax);
+	float tNearZ = (std::min)(tzMin, tzMax);
+	float tFarX = (std::max)(txMin, txMax);
+	float tFarY = (std::max)(tyMin, tyMax);
+	float tFarZ = (std::max)(tzMin, tzMax);
+
+	// AABBとの衝突点(貫通点)のtが小さい方
+	float tmin = (std::max)((std::max)(tNearX, tNearY), tNearZ);
+	// AABBとの衝突点(貫通点)のtが大きい方
+	float tmax = (std::min)((std::min)(tFarX, tFarY), tFarZ);
+
+	// Line
 	if (tmin <= tmax) {
 		return true;
+	}
+
+	return false;
+}
+
+bool IsCollision(const AABB& aabb, const Ray& ray) {
+	float txMin = (aabb.min.x - ray.origin.x) / ray.diff.x;
+	float txMax = (aabb.max.x - ray.origin.x) / ray.diff.x;
+	float tyMin = (aabb.min.y - ray.origin.y) / ray.diff.y;
+	float tyMax = (aabb.max.y - ray.origin.y) / ray.diff.y;
+	float tzMin = (aabb.min.z - ray.origin.z) / ray.diff.z;
+	float tzMax = (aabb.max.z - ray.origin.z) / ray.diff.z;
+
+	float tNearX = (std::min)(txMin, txMax);
+	float tNearY = (std::min)(tyMin, tyMax);
+	float tNearZ = (std::min)(tzMin, tzMax);
+	float tFarX = (std::max)(txMin, txMax);
+	float tFarY = (std::max)(tyMin, tyMax);
+	float tFarZ = (std::max)(tzMin, tzMax);
+
+	// AABBとの衝突点(貫通点)のtが小さい方
+	float tmin = (std::max)((std::max)(tNearX, tNearY), tNearZ);
+	// AABBとの衝突点(貫通点)のtが大きい方
+	float tmax = (std::min)((std::min)(tFarX, tFarY), tFarZ);
+
+	// Ray
+	if (tmin <= tmax) {
+		if (tmax >= 0.0f) {
+			return true;
+		}
 	}
 
 	return false;
@@ -494,6 +566,60 @@ bool IsCollision(const OBB& obb, const Sphere& sphere) {
 	Sphere sphereOBBLocal{centerInOBBLocalSpace, sphere.radius};
 	// ローカル空間で衝突判定
 	return IsCollision(aabbOBBLocal, sphereOBBLocal);
+}
+
+bool IsCollision(const OBB& obb, const Segment& segment) {
+	Matrix4x4 obbWorldMatrix = obb.GetWorldMatrix();
+	Matrix4x4 obbWorldMatrixInverse = Matrix4x4::Inverse(obbWorldMatrix);
+
+	Vector3 localOrigin = Vector3::Transform(segment.origin, obbWorldMatrixInverse);
+	Vector3 localEnd = Vector3::Transform(segment.origin + segment.diff, obbWorldMatrixInverse);
+
+	AABB localAABB{
+	    -obb.size,
+	    obb.size,
+	};
+
+	Segment localSegment;
+	localSegment.origin = localOrigin;
+	localSegment.diff = localEnd - localOrigin;
+	return IsCollision(localAABB, localSegment);
+}
+
+bool IsCollision(const OBB& obb, const Line& line) {
+	Matrix4x4 obbWorldMatrix = obb.GetWorldMatrix();
+	Matrix4x4 obbWorldMatrixInverse = Matrix4x4::Inverse(obbWorldMatrix);
+
+	Vector3 localOrigin = Vector3::Transform(line.origin, obbWorldMatrixInverse);
+	Vector3 localEnd = Vector3::Transform(line.origin + line.diff, obbWorldMatrixInverse);
+
+	AABB localAABB{
+	    -obb.size,
+	    obb.size,
+	};
+
+	Line localLine;
+	localLine.origin = localOrigin;
+	localLine.diff = localEnd - localOrigin;
+	return IsCollision(localAABB, localLine);
+}
+
+bool IsCollision(const OBB& obb, const Ray& ray) {
+	Matrix4x4 obbWorldMatrix = obb.GetWorldMatrix();
+	Matrix4x4 obbWorldMatrixInverse = Matrix4x4::Inverse(obbWorldMatrix);
+
+	Vector3 localOrigin = Vector3::Transform(ray.origin, obbWorldMatrixInverse);
+	Vector3 localEnd = Vector3::Transform(ray.origin + ray.diff, obbWorldMatrixInverse);
+
+	AABB localAABB{
+	    -obb.size,
+	    obb.size,
+	};
+
+	Ray localRay;
+	localRay.origin = localOrigin;
+	localRay.diff = localEnd - localOrigin;
+	return IsCollision(localAABB, localRay);
 }
 
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
