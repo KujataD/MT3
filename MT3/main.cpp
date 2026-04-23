@@ -71,6 +71,7 @@ struct ConicalPendulum {
 	float angularVelocity;
 };
 
+
 void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
 
 void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label);
@@ -111,8 +112,10 @@ void BallSpring(Ball& ball, Spring& spring, float deltaTime = 1.0f / 60.0f);
 
 void CircularMotion(Vector3& p, const Vector3& center, float& angle, float angularVelocity, float radius, float deltaTime = 1.0f / 60.0f);
 
-// 課題 04_02
+// 課題 04_04
 // --------------------------------------------------------
+Vector3 Reflect(const Vector3& input, const Vector3& normal);
+
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
@@ -138,29 +141,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	const float kMoveSpeed = 0.1f;
 
 	float deltaTime = 1.0f / 60.0f;
+	float e = 0.8f;
 
-	// 課題 04_02
+	// 課題 04_04
 	// ----------------------------------------------------
-	bool isMove = false;
+	
+	Plane plane;
+	plane.normal = Vector3::Normalize({-0.2f, 0.9f, -0.3f});
+	plane.distance = 0.0f;
 
-	ConicalPendulum conicalPendulum;
-	conicalPendulum.anchor = {0.0f, 1.0f, 0.0f};
-	conicalPendulum.length = 0.8f;
-	conicalPendulum.halfApexAngle = 0.7f;
-	conicalPendulum.angle = 0.0f;
-	conicalPendulum.angularVelocity = 0.0f;
-
-	Ball ball;
+	Ball ball{};
+	ball.position = {0.8f, 1.2f, 0.3f};
+	ball.mass = 2.0f;
 	ball.radius = 0.05f;
-
-	conicalPendulum.angularVelocity = std ::sqrt(9.8f / (conicalPendulum.length * std ::cos(conicalPendulum.halfApexAngle)));
-	conicalPendulum.angle += conicalPendulum.angularVelocity * deltaTime;
-	float radius = std::sin(conicalPendulum.halfApexAngle) * conicalPendulum.length;
-	float height = std::cos(conicalPendulum.halfApexAngle) * conicalPendulum.length;
-	ball.position.x = conicalPendulum.anchor.x + std::cos(conicalPendulum.angle) * radius;
-	ball.position.y = conicalPendulum.anchor.y - height;
-	ball.position.z = conicalPendulum.anchor.z - std::sin(conicalPendulum.angle) * radius;
-
+	ball.color = WHITE;
+	ball.acceleration = {0.0f, -9.8f, 0.0f};
+	
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
 		// フレームの開始
@@ -218,14 +214,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 viewportMatrix = Matrix4x4::MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
 		// 円錐振り子運動の計算
-		if (isMove) {
-			conicalPendulum.angularVelocity = std ::sqrt(9.8f / (conicalPendulum.length * std ::cos(conicalPendulum.halfApexAngle)));
-			conicalPendulum.angle += conicalPendulum.angularVelocity * deltaTime;
-			radius = std::sin(conicalPendulum.halfApexAngle) * conicalPendulum.length;
-			height = std::cos(conicalPendulum.halfApexAngle) * conicalPendulum.length;
-			ball.position.x = conicalPendulum.anchor.x + std::cos(conicalPendulum.angle) * radius;
-			ball.position.y = conicalPendulum.anchor.y - height;
-			ball.position.z = conicalPendulum.anchor.z - std::sin(conicalPendulum.angle) * radius;
+	
+		ball.velocity += ball.acceleration * deltaTime;
+		ball.position += ball.velocity * deltaTime;
+
+		if (IsCollision(Sphere{ball.position, ball.radius}, plane)) {
+			Vector3 reflected = Reflect(ball.velocity, plane.normal);
+			Vector3 projectToNormal = Vector3::Project(reflected, plane.normal);
+			Vector3 movingDirection = reflected - projectToNormal;
+			ball.velocity = projectToNormal * e + movingDirection;
 		}
 
 		///
@@ -237,8 +234,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
+		DrawPlane(plane, viewProjectionMatrix, viewportMatrix, WHITE);
 		DrawSphere({ball.position, ball.radius}, viewProjectionMatrix, viewportMatrix, WHITE);
-		DrawLine(ball.position, conicalPendulum.anchor, viewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -252,10 +249,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		ImGui ::Begin("Window");
 		if (ImGui::Button("Start")) {
-			isMove = true;
+			ball.position = {0.8f, 1.2f, 0.3f};
+			ball.velocity = {0.0f, 0.0f, 0.0f};
 		}
-		ImGui::SliderFloat("Length", &conicalPendulum.length, 0.0f, 2.0f, "%.3f");
-		ImGui::SliderFloat("HalfApexAngle", &conicalPendulum.halfApexAngle, 0.0f, 1.5f, "%.3f");
 		ImGui::End();
 
 		Novice::ScreenPrintf(10, 10, "Mouse Right Drag : Camera Rotate");
@@ -596,3 +592,5 @@ void CircularMotion(Vector3& p, const Vector3& center, float& angle, float angul
 	p.y = center.y + std::sin(angle) * radius;
 	p.z = center.z;
 }
+
+Vector3 Reflect(const Vector3& input, const Vector3& normal) { return input - normal * (2.0f * Vector3::Dot(input, normal)); }
