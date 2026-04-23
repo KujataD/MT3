@@ -46,9 +46,9 @@ struct OBB {
 		Matrix4x4 rotateMatrix = Matrix4x4::MakeRotateZMatrix(rotate.z) * Matrix4x4::MakeRotateYMatrix(rotate.y) * Matrix4x4::MakeRotateXMatrix(rotate.x);
 
 		// 回転行列から軸を抽出
-		orientations[0] = {rotateMatrix.m[0][0], rotateMatrix.m[1][0], rotateMatrix.m[2][0]}; 
-		orientations[1] = {rotateMatrix.m[0][1], rotateMatrix.m[1][1], rotateMatrix.m[2][1]}; 
-		orientations[2] = {rotateMatrix.m[0][2], rotateMatrix.m[1][2], rotateMatrix.m[2][2]}; 
+		orientations[0] = {rotateMatrix.m[0][0], rotateMatrix.m[1][0], rotateMatrix.m[2][0]};
+		orientations[1] = {rotateMatrix.m[0][1], rotateMatrix.m[1][1], rotateMatrix.m[2][1]};
+		orientations[2] = {rotateMatrix.m[0][2], rotateMatrix.m[1][2], rotateMatrix.m[2][2]};
 
 		orientations[0] = Vector3::Normalize(orientations[0]);
 		orientations[1] = Vector3::Normalize(orientations[1]);
@@ -628,45 +628,23 @@ bool IsCollision(const OBB& obb, const Ray& ray) {
 }
 
 bool IsOverlappingOnAxis(const OBB& obb1, const OBB& obb2, const Vector3& axis) {
-	// ゼロベクトル判定
-	if (axis.LengthSquared() < 1e-6f) {
-		return true;
-	}
 	Vector3 L = Vector3::Normalize(axis);
 
-	// 基準座標
-	Vector3 origin = obb1.center;
+	// 全てワールド座標からの Dot で統一する
+	auto GetProjection = [&](const OBB& obb) {
+		float center = Vector3::Dot(obb.center, L);
+		float extent =
+		    std::abs(Vector3::Dot(obb.orientations[0], L)) * obb.size.x + std::abs(Vector3::Dot(obb.orientations[1], L)) * obb.size.y + std::abs(Vector3::Dot(obb.orientations[2], L)) * obb.size.z;
+		return std::make_pair(center - extent, center + extent);
+	};
 
-	// Aの射影（Min / Max）
-	float centerA = Vector3::Dot(obb1.center, L);
+	auto [min1, max1] = GetProjection(obb1);
+	auto [min2, max2] = GetProjection(obb2);
 
-	float extentA =
-	    std::abs(Vector3::Dot(obb1.orientations[0], L)) * obb1.size.x + std::abs(Vector3::Dot(obb1.orientations[1], L)) * obb1.size.y + std::abs(Vector3::Dot(obb1.orientations[2], L)) * obb1.size.z;
-
-	float min1 = centerA - extentA;
-	float max1 = centerA + extentA;
-
-	// Bの射影（Min / Max）
-	float centerB = Vector3::Dot(obb2.center, L);
-
-	float extentB =
-	    std::abs(Vector3::Dot(obb2.orientations[0], L)) * obb2.size.x + std::abs(Vector3::Dot(obb2.orientations[1], L)) * obb2.size.y + std::abs(Vector3::Dot(obb2.orientations[2], L)) * obb2.size.z;
-
-	float min2 = centerB - extentB;
-	float max2 = centerB + extentB;
-
-	float L1 = max1 - min1;
-	float L2 = max2 - min2;
-
-	// 分離軸判定
-	float sumSpan = L1 + L2;
+	float sumSpan = (max1 - min1) + (max2 - min2);
 	float longSpan = (std::max)(max1, max2) - (std::min)(min1, min2);
 
-	if (sumSpan < longSpan) {
-		return false;
-	}
-
-	return true;
+	return sumSpan >= longSpan;
 }
 
 bool IsCollision(const OBB& obb1, const OBB& obb2) {
