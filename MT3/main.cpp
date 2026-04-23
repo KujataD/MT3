@@ -63,6 +63,14 @@ struct Pendulum {
 	float angularAcceleration;
 };
 
+struct ConicalPendulum {
+	Vector3 anchor;
+	float length;
+	float halfApexAngle;
+	float angle;
+	float angularVelocity;
+};
+
 void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
 
 void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label);
@@ -135,17 +143,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// ----------------------------------------------------
 	bool isMove = false;
 
-	Pendulum pendulum;
-	pendulum.anchor = {0.0f, 1.0f, 0.0f};
-	pendulum.length = 0.8f;
-	pendulum.angle = 0.7f;
-	pendulum.angularVelocity = 0.0f;
-	pendulum.angularAcceleration = 0;
+	ConicalPendulum conicalPendulum;
+	conicalPendulum.anchor = {0.0f, 1.0f, 0.0f};
+	conicalPendulum.length = 0.8f;
+	conicalPendulum.halfApexAngle = 0.7f;
+	conicalPendulum.angle = 0.0f;
+	conicalPendulum.angularVelocity = 0.0f;
 
-	Vector3 p;
-	p.x = pendulum.anchor.x + std ::sin(pendulum.angle) * pendulum.length;
-	p.y = pendulum.anchor.y - std ::cos(pendulum.angle) * pendulum.length;
-	p.z = pendulum.anchor.z;
+	Ball ball;
+	ball.radius = 0.05f;
+
+	conicalPendulum.angularVelocity = std ::sqrt(9.8f / (conicalPendulum.length * std ::cos(conicalPendulum.halfApexAngle)));
+	conicalPendulum.angle += conicalPendulum.angularVelocity * deltaTime;
+	float radius = std::sin(conicalPendulum.halfApexAngle) * conicalPendulum.length;
+	float height = std::cos(conicalPendulum.halfApexAngle) * conicalPendulum.length;
+	ball.position.x = conicalPendulum.anchor.x + std::cos(conicalPendulum.angle) * radius;
+	ball.position.y = conicalPendulum.anchor.y - height;
+	ball.position.z = conicalPendulum.anchor.z - std::sin(conicalPendulum.angle) * radius;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -203,16 +217,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 viewProjectionMatrix = viewMatrix * projectionMatrix;
 		Matrix4x4 viewportMatrix = Matrix4x4::MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
-		// 振り子運動の計算
+		// 円錐振り子運動の計算
 		if (isMove) {
-			pendulum.angularAcceleration = -(9.8f / pendulum.length) * std ::sin(pendulum.angle);
-			pendulum.angularVelocity += pendulum.angularAcceleration * deltaTime;
-			pendulum.angle += pendulum.angularVelocity * deltaTime;
-
-			// pは振り子の先端の位置
-			p.x = pendulum.anchor.x + std ::sin(pendulum.angle) * pendulum.length;
-			p.y = pendulum.anchor.y - std ::cos(pendulum.angle) * pendulum.length;
-			p.z = pendulum.anchor.z;
+			conicalPendulum.angularVelocity = std ::sqrt(9.8f / (conicalPendulum.length * std ::cos(conicalPendulum.halfApexAngle)));
+			conicalPendulum.angle += conicalPendulum.angularVelocity * deltaTime;
+			radius = std::sin(conicalPendulum.halfApexAngle) * conicalPendulum.length;
+			height = std::cos(conicalPendulum.halfApexAngle) * conicalPendulum.length;
+			ball.position.x = conicalPendulum.anchor.x + std::cos(conicalPendulum.angle) * radius;
+			ball.position.y = conicalPendulum.anchor.y - height;
+			ball.position.z = conicalPendulum.anchor.z - std::sin(conicalPendulum.angle) * radius;
 		}
 
 		///
@@ -224,8 +237,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
-		DrawSphere({p, 0.05f}, viewProjectionMatrix, viewportMatrix, WHITE);
-		DrawLine(p, pendulum.anchor, viewProjectionMatrix, viewportMatrix, WHITE);
+		DrawSphere({ball.position, ball.radius}, viewProjectionMatrix, viewportMatrix, WHITE);
+		DrawLine(ball.position, conicalPendulum.anchor, viewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -241,6 +254,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		if (ImGui::Button("Start")) {
 			isMove = true;
 		}
+		ImGui::SliderFloat("Length", &conicalPendulum.length, 0.0f, 2.0f, "%.3f");
+		ImGui::SliderFloat("HalfApexAngle", &conicalPendulum.halfApexAngle, 0.0f, 1.5f, "%.3f");
 		ImGui::End();
 
 		Novice::ScreenPrintf(10, 10, "Mouse Right Drag : Camera Rotate");
