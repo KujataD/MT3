@@ -91,7 +91,9 @@ Vector3 Bezier(const Vector3& p0, const Vector3& p1, const Vector3& p2, float t)
 
 void DrawBezier(const Vector3& controlPoint0, const Vector3& controlPoint1, const Vector3& controlPoint2, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color);
 
-// 課題 04_00
+void BallSpring(Ball& ball, Spring& spring, float deltaTime = 1.0f / 60.0f);
+
+// 課題 04_01
 // --------------------------------------------------------
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -117,21 +119,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	const float kRotateSpeed = 0.0025f;
 	const float kMoveSpeed = 0.1f;
 
-	// 課題 04_00
-	// ----------------------------------------------------
-	Spring spring{};
-	spring.anchor = {0.0f, 0.0f, 0.0f};
-	spring.naturalLength = 1.0f;
-	spring.stiffness = 100.0f;
-	spring.dampingCoefficient = 2.0f;
-
-	Ball ball{};
-	ball.position = {1.2f, 0.0f, 0.0f};
-	ball.mass = 2.0f;
-	ball.radius = 0.05f;
-	ball.color = BLUE;
-
 	float deltaTime = 1.0f / 60.0f;
+
+	// 課題 04_01
+	// ----------------------------------------------------
+	float angularVelocity = 3.14f;
+	float angle = 0.0f;
+	Vector3 c = {0.0f, 0.0f, 0.0f};
+	float r = 1.0f;
+	Vector3 p;
+	p.x = c.x + std::cos(angle) * r;
+	p.y = c.y + std::sin(angle) * r;
+	p.z = c.z;
+	bool isRotate = false;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -189,23 +189,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 viewProjectionMatrix = viewMatrix * projectionMatrix;
 		Matrix4x4 viewportMatrix = Matrix4x4::MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
-		// ばねの計算
-		
-		Vector3 diff = ball.position - spring.anchor;
-		float length = Vector3::Length(diff);
-		if (length != 0.0f) {
-			Vector3 direction = Vector3::Normalize(diff);
-			Vector3 restPosition = spring.anchor + direction * spring.naturalLength;
-			Vector3 displacement = (ball.position - restPosition) * length;
-			Vector3 restoringForce = displacement * -spring.stiffness;
-			Vector3 dampingForce = ball.velocity * -spring.dampingCoefficient;
-			Vector3 force = restoringForce + dampingForce;
-			ball.acceleration = force / ball.mass;
-		}
+		// 円運動の計算
+		if (isRotate) {
+			angle += angularVelocity * deltaTime;
 
-		ball.velocity += ball.acceleration * deltaTime;
-		ball.position += ball.velocity * deltaTime;
-		
+			p.x = c.x + std::cos(angle) * r;
+			p.y = c.y + std::sin(angle) * r;
+			p.z = c.z;
+		}
 
 		///
 		/// ↑更新処理ここまで
@@ -216,8 +207,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
-		DrawSphere({ball.position, ball.radius}, viewProjectionMatrix, viewportMatrix, ball.color);
-		DrawLine(ball.position, spring.anchor, viewProjectionMatrix, viewportMatrix, WHITE);
+		DrawSphere({p, 0.05f}, viewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -231,7 +221,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		ImGui ::Begin("Window");
 		if (ImGui::Button("Start")) {
-			ball.position = {1.2f, 0.0f, 0.0f};
+			isRotate = true;
 		}
 		ImGui::End();
 
@@ -547,4 +537,21 @@ void DrawBezier(const Vector3& controlPoint0, const Vector3& controlPoint1, cons
 
 		Novice::DrawLine(static_cast<int>(bezier0.x), static_cast<int>(bezier0.y), static_cast<int>(bezier1.x), static_cast<int>(bezier1.y), color);
 	}
+}
+
+void BallSpring(Ball& ball, Spring& spring, float deltaTime) {
+	Vector3 diff = ball.position - spring.anchor;
+	float length = Vector3::Length(diff);
+	if (length != 0.0f) {
+		Vector3 direction = Vector3::Normalize(diff);
+		Vector3 restPosition = spring.anchor + direction * spring.naturalLength;
+		Vector3 displacement = (ball.position - restPosition) * length;
+		Vector3 restoringForce = displacement * -spring.stiffness;
+		Vector3 dampingForce = ball.velocity * -spring.dampingCoefficient;
+		Vector3 force = restoringForce + dampingForce;
+		ball.acceleration = force / ball.mass;
+	}
+
+	ball.velocity += ball.acceleration * deltaTime;
+	ball.position += ball.velocity * deltaTime;
 }
