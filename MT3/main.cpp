@@ -46,9 +46,9 @@ struct OBB {
 		Matrix4x4 rotateMatrix = Matrix4x4::MakeRotateZMatrix(rotate.z) * Matrix4x4::MakeRotateYMatrix(rotate.y) * Matrix4x4::MakeRotateXMatrix(rotate.x);
 
 		// 回転行列から軸を抽出
-		orientations[0] = {rotateMatrix.m[0][0], rotateMatrix.m[1][0], rotateMatrix.m[2][0]};
-		orientations[1] = {rotateMatrix.m[0][1], rotateMatrix.m[1][1], rotateMatrix.m[2][1]};
-		orientations[2] = {rotateMatrix.m[0][2], rotateMatrix.m[1][2], rotateMatrix.m[2][2]};
+		orientations[0] = {rotateMatrix.m[0][0], rotateMatrix.m[0][1], rotateMatrix.m[0][2]}; // 0行目
+		orientations[1] = {rotateMatrix.m[1][0], rotateMatrix.m[1][1], rotateMatrix.m[1][2]}; // 1行目
+		orientations[2] = {rotateMatrix.m[2][0], rotateMatrix.m[2][1], rotateMatrix.m[2][2]}; // 2行目
 
 		orientations[0] = Vector3::Normalize(orientations[0]);
 		orientations[1] = Vector3::Normalize(orientations[1]);
