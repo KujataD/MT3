@@ -55,6 +55,14 @@ struct Ball {
 	unsigned int color;
 };
 
+struct Pendulum {
+	Vector3 anchor;
+	float length;
+	float angle;
+	float angularVelocity;
+	float angularAcceleration;
+};
+
 void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label);
 
 void MatrixScreenPrintf(int x, int y, const Matrix4x4& matrix, const char* label);
@@ -93,7 +101,9 @@ void DrawBezier(const Vector3& controlPoint0, const Vector3& controlPoint1, cons
 
 void BallSpring(Ball& ball, Spring& spring, float deltaTime = 1.0f / 60.0f);
 
-// 課題 04_01
+void CircularMotion(Vector3& p, const Vector3& center, float& angle, float angularVelocity, float radius, float deltaTime = 1.0f / 60.0f);
+
+// 課題 04_02
 // --------------------------------------------------------
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -121,17 +131,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	float deltaTime = 1.0f / 60.0f;
 
-	// 課題 04_01
+	// 課題 04_02
 	// ----------------------------------------------------
-	float angularVelocity = 3.14f;
-	float angle = 0.0f;
-	Vector3 c = {0.0f, 0.0f, 0.0f};
-	float r = 1.0f;
+	bool isMove = false;
+
+	Pendulum pendulum;
+	pendulum.anchor = {0.0f, 1.0f, 0.0f};
+	pendulum.length = 0.8f;
+	pendulum.angle = 0.7f;
+	pendulum.angularVelocity = 0.0f;
+	pendulum.angularAcceleration = 0;
+
 	Vector3 p;
-	p.x = c.x + std::cos(angle) * r;
-	p.y = c.y + std::sin(angle) * r;
-	p.z = c.z;
-	bool isRotate = false;
+	p.x = pendulum.anchor.x + std ::sin(pendulum.angle) * pendulum.length;
+	p.y = pendulum.anchor.y - std ::cos(pendulum.angle) * pendulum.length;
+	p.z = pendulum.anchor.z;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -189,13 +203,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 viewProjectionMatrix = viewMatrix * projectionMatrix;
 		Matrix4x4 viewportMatrix = Matrix4x4::MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
-		// 円運動の計算
-		if (isRotate) {
-			angle += angularVelocity * deltaTime;
+		// 振り子運動の計算
+		if (isMove) {
+			pendulum.angularAcceleration = -(9.8f / pendulum.length) * std ::sin(pendulum.angle);
+			pendulum.angularVelocity += pendulum.angularAcceleration * deltaTime;
+			pendulum.angle += pendulum.angularVelocity * deltaTime;
 
-			p.x = c.x + std::cos(angle) * r;
-			p.y = c.y + std::sin(angle) * r;
-			p.z = c.z;
+			// pは振り子の先端の位置
+			p.x = pendulum.anchor.x + std ::sin(pendulum.angle) * pendulum.length;
+			p.y = pendulum.anchor.y - std ::cos(pendulum.angle) * pendulum.length;
+			p.z = pendulum.anchor.z;
 		}
 
 		///
@@ -208,6 +225,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
 		DrawSphere({p, 0.05f}, viewProjectionMatrix, viewportMatrix, WHITE);
+		DrawLine(p, pendulum.anchor, viewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで
@@ -221,7 +239,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		ImGui ::Begin("Window");
 		if (ImGui::Button("Start")) {
-			isRotate = true;
+			isMove = true;
 		}
 		ImGui::End();
 
@@ -554,4 +572,12 @@ void BallSpring(Ball& ball, Spring& spring, float deltaTime) {
 
 	ball.velocity += ball.acceleration * deltaTime;
 	ball.position += ball.velocity * deltaTime;
+}
+
+void CircularMotion(Vector3& p, const Vector3& center, float& angle, float angularVelocity, float radius, float deltaTime) {
+	angle += angularVelocity * deltaTime;
+
+	p.x = center.x + std::cos(angle) * radius;
+	p.y = center.y + std::sin(angle) * radius;
+	p.z = center.z;
 }
