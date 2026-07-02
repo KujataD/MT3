@@ -8,11 +8,6 @@ class Matrix4x4 {
 public:
 	float m[4][4];
 
-    Matrix4x4 operator+(const Matrix4x4& m) const;
-	Matrix4x4 operator-(const Matrix4x4& m) const;
-	Matrix4x4 operator*(const Matrix4x4& m) const;
-	Matrix4x4 operator/(float scalar) const;
-
 	static Matrix4x4 Inverse(const Matrix4x4& m);
 	static Matrix4x4 Transpose(const Matrix4x4& m);
 	static Matrix4x4 MakeIdentity();
@@ -22,6 +17,7 @@ public:
 	static Matrix4x4 MakeRotateXMatrix(float radian);
 	static Matrix4x4 MakeRotateYMatrix(float radian);
 	static Matrix4x4 MakeRotateZMatrix(float radian);
+	static Matrix4x4 MakeAffineMatrixOrientations(const Vector3 orientations[3], const Vector3& translate);
 
 	static Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate);
 
@@ -34,3 +30,8 @@ public:
 	// ビューポート変換行列
 	static Matrix4x4 MakeViewportMatrix(float left, float top, float width, float height, float minDepth, float maxDepth);
 };
+
+Matrix4x4 operator+(const Matrix4x4& m1, const Matrix4x4& m2);
+Matrix4x4 operator-(const Matrix4x4& m1, const Matrix4x4& m2);
+Matrix4x4 operator*(const Matrix4x4& m1, const Matrix4x4& m2);
+Matrix4x4 operator/(const Matrix4x4& m, float scalar);

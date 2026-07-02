@@ -3,20 +3,24 @@
 #include <cmath>
 
 class Matrix4x4;
+class Vector3;
 struct Segment;
 struct Sphere;
 struct Plane;
+
+Vector3 operator+(const Vector3& v);
+Vector3 operator-(const Vector3& v);
+Vector3 operator+(const Vector3& v1, const Vector3& v2);
+Vector3 operator-(const Vector3& v1, const Vector3& v2);
+Vector3 operator*(const Vector3& v, float scalar);
+Vector3 operator*(float scalar, const Vector3& v);
+Vector3 operator/(const Vector3& v, float scalar);
 
 class Vector3 {
 public:
 	float x;
 	float y;
 	float z;
-
-	Vector3 operator+(const Vector3& v) const { return {x + v.x, y + v.y, z + v.z}; }
-	Vector3 operator-(const Vector3& v) const { return {x - v.x, y - v.y, z - v.z}; }
-	Vector3 operator*(float scalar) const { return {x * scalar, y * scalar, z * scalar}; }
-	Vector3 operator/(float scalar) const { return {x / scalar, y / scalar, z / scalar}; }
 
 	void operator+=(const Vector3& v) {
 		x += v.x;
@@ -42,6 +46,7 @@ public:
 	static float Dot(const Vector3& v1, const Vector3& v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z; }
 	static Vector3 Cross(const Vector3& a, const Vector3& b) { return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x}; }
 	static float Length(const Vector3& v) { return std::sqrt(Dot(v, v)); }
+	float LengthSquared() const { return x * x + y * y + z * z; }
 	static Vector3 Normalize(const Vector3& v) { return v / Length(v); }
 	static Vector3 Transform(const Vector3& v, const Matrix4x4& m);
 	static Vector3 Project(const Vector3& a, const Vector3& b);
@@ -49,7 +54,25 @@ public:
 	static Vector3 Perpendicular(const Vector3& vector);
 };
 
+inline Vector3 operator+(const Vector3& v) { return v; }
+inline Vector3 operator-(const Vector3& v) { return {-v.x, -v.y, -v.z}; }
+inline Vector3 operator+(const Vector3& v1, const Vector3& v2) { return {v1.x + v2.x, v1.y + v2.y, v1.z + v2.z}; }
+inline Vector3 operator-(const Vector3& v1, const Vector3& v2) { return {v1.x - v2.x, v1.y - v2.y, v1.z - v2.z}; }
+inline Vector3 operator*(const Vector3& v, float scalar) { return {v.x * scalar, v.y * scalar, v.z * scalar}; }
+inline Vector3 operator*(float scalar, const Vector3& v) { return v * scalar; }
+inline Vector3 operator/(const Vector3& v, float scalar) { return {v.x / scalar, v.y / scalar, v.z / scalar}; }
+
 struct Segment {
+	Vector3 origin; // 始点
+	Vector3 diff;   // 終点の差分ベクトル
+};
+
+struct Ray {
+	Vector3 origin; // 始点
+	Vector3 diff;   // 終点の差分ベクトル
+};
+
+struct Line {
 	Vector3 origin; // 始点
 	Vector3 diff;   // 終点の差分ベクトル
 };
