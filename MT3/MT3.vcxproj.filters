@@ -17,9 +17,35 @@
     <Filter Include="Math">
       <UniqueIdentifier>{df739746-1511-4255-8635-4b353717e3a5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Application">
+      <UniqueIdentifier>{bfe7710c-51bf-4944-931a-203013722139}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Geometry">
+      <UniqueIdentifier>{e6070787-cf14-439c-b31d-b9e085735645}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="main.cpp">
+      <Filter>Application</Filter>
+    </ClCompile>
+    <ClCompile Include="ScreenPrint.cpp">
+      <Filter>Application</Filter>
+    </ClCompile>
+    <ClCompile Include="Collision.cpp">
+      <Filter>Geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="Draw.cpp">
+      <Filter>Geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="GeometryTypes.cpp">
+      <Filter>Geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="Motion.cpp">
+      <Filter>Geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="MathUtility.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
     <ClCompile Include="C:\KamataEngine\Adapter\Novice.cpp">
       <Filter>KamataEngine\Adapter</Filter>
     </ClCompile>
@@ -117,6 +143,24 @@
     </ClInclude>
     <ClInclude Include="Matrix4x4.h">
       <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MathUtility.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="ScreenPrint.h">
+      <Filter>Application</Filter>
+    </ClInclude>
+    <ClInclude Include="Collision.h">
+      <Filter>Geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="Draw.h">
+      <Filter>Geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="GeometryTypes.h">
+      <Filter>Geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="Motion.h">
+      <Filter>Geometry</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
