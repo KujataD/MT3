@@ -4,9 +4,9 @@
 
 void BallSpring(Ball& ball, Spring& spring, float deltaTime) {
 	const Vector3 diff = ball.position - spring.anchor;
-	const float length = Vector3::Length(diff);
+	const float length = Length(diff);
 	if (length != 0.0f) {
-		const Vector3 direction = Vector3::Normalize(diff);
+		const Vector3 direction = Normalize(diff);
 		const Vector3 restPosition = spring.anchor + direction * spring.naturalLength;
 		const Vector3 displacement = (ball.position - restPosition) * length;
 		const Vector3 restoringForce = displacement * -spring.stiffness;

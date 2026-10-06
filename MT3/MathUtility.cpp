@@ -15,5 +15,5 @@ Vector3 Bezier(const Vector3& p0, const Vector3& p1, const Vector3& p2, float t)
 }
 
 Vector3 Reflect(const Vector3& input, const Vector3& normal) {
-	return input - normal * (2.0f * Vector3::Dot(input, normal));
+	return input - normal * (2.0f * Dot(input, normal));
 }

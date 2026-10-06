@@ -10,7 +10,7 @@
 namespace {
 
 Vector3 ToScreen(const Vector3& position, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix) {
-	return Vector3::Transform(Vector3::Transform(position, viewProjectionMatrix), viewportMatrix);
+	return Transform(Transform(position, viewProjectionMatrix), viewportMatrix);
 }
 
 void DrawBoxEdges(const Vector3 (&vertices)[8], std::uint32_t color) {
@@ -83,9 +83,9 @@ void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, con
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, std::uint32_t color) {
 	const Vector3 center = plane.normal * plane.distance;
 	Vector3 perpendiculars[4];
-	perpendiculars[0] = Vector3::Normalize(Vector3::Perpendicular(plane.normal));
+	perpendiculars[0] = Normalize(Perpendicular(plane.normal));
 	perpendiculars[1] = -perpendiculars[0];
-	perpendiculars[2] = Vector3::Cross(plane.normal, perpendiculars[0]);
+	perpendiculars[2] = Cross(plane.normal, perpendiculars[0]);
 	perpendiculars[3] = -perpendiculars[2];
 
 	Vector3 points[4];
@@ -134,7 +134,7 @@ void DrawOBB(const OBB& obb, const Matrix4x4& viewProjectionMatrix, const Matrix
 	};
 	const Matrix4x4 worldMatrix = obb.GetWorldMatrix();
 	for (Vector3& vertex : vertices) {
-		vertex = Vector3::Transform(vertex, worldMatrix);
+		vertex = Transform(vertex, worldMatrix);
 		vertex = ToScreen(vertex, viewProjectionMatrix, viewportMatrix);
 	}
 	DrawBoxEdges(vertices, color);

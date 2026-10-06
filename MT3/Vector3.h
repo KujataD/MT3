@@ -41,16 +41,18 @@ public:
 		z /= scalar;
 	}
 
-	static float Dot(const Vector3& v1, const Vector3& v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z; }
-	static Vector3 Cross(const Vector3& a, const Vector3& b) { return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x}; }
-	static float Length(const Vector3& v) { return std::sqrt(Dot(v, v)); }
 	float LengthSquared() const { return x * x + y * y + z * z; }
-	static Vector3 Normalize(const Vector3& v) { return v / Length(v); }
-	static Vector3 Transform(const Vector3& v, const Matrix4x4& m);
-	static Vector3 Project(const Vector3& a, const Vector3& b);
-	static Vector3 ClosestPoint(const Vector3& point, const Segment& segment);
-	static Vector3 Perpendicular(const Vector3& vector);
 };
+
+inline float Dot(const Vector3& v1, const Vector3& v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z; }
+inline Vector3 Cross(const Vector3& a, const Vector3& b) { return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x}; }
+inline float Length(const Vector3& v) { return std::sqrt(Dot(v, v)); }
+inline Vector3 Normalize(const Vector3& v) { return v / Length(v); }
+inline Vector3 Normalize(const Vector3& to, const Vector3& from) { return Normalize(to - from); }
+Vector3 Transform(const Vector3& v, const Matrix4x4& m);
+Vector3 Project(const Vector3& a, const Vector3& b);
+Vector3 ClosestPoint(const Vector3& point, const Segment& segment);
+Vector3 Perpendicular(const Vector3& vector);
 
 struct Segment {
 	Vector3 origin; // 始点
