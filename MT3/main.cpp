@@ -7,11 +7,37 @@
 #include "Vector3.h"
 #include <cmath>
 #include <imgui.h>
+#include <numbers>
 
-const char kWindowTitle[] = "LE2B_04_オオツカ_ダイチ_MT3";
+const char kWindowTitle[] = "LE2B_03_オオツカ_ダイチ_MT4";
 
 static const int kWindowWidth = 1280;
 static const int kWindowHeight = 720;
+
+struct Spherical {
+	float radius; // 動径 r 接近後退
+	float theta;  // 仰角 θ 見下ろし角度
+	float phi;    // 方位角 φ 旋回
+};
+
+Vector3 ToCartesian(const Spherical s) {
+	float rho = s.radius * std::cos(s.theta);
+	return {rho * std::cos(s.phi), s.radius * std::sin(s.theta), rho * std::sin(s.phi)};
+}
+
+Spherical ToSpherical(const Vector3& p) {
+	float r = std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
+	if (r == 0.0f) {
+		return {0.0f, 0.0f, 0.0f};
+	}
+
+	float sinTheta = std::clamp(p.y / r, -1.0f, 1.0f);
+	float phi = 0.0f;
+	if (p.x != 0.0f || p.z != 0.0f) {
+		phi = std ::atan2(p.z, p.x);
+	}
+	return {r, std::asin(sinTheta), phi};
+}
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
@@ -23,33 +49,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	char keys[256] = {0};
 	char preKeys[256] = {0};
 
-	// カメラ
+	// MT4_00_01
 	// ----------------------------------------------------
-
-	Vector3 cameraTranslate{0.0f, 2.0f, -6.49f};
-	Vector3 cameraRotate{0.21f, 0.0f, 0.0f};
-
-	int mouseX = 0;
-	int mouseY = 0;
-	int prevMouseX = 0;
-	int prevMouseY = 0;
-	const float kRotateSpeed = 0.0025f;
-	const float kMoveSpeed = 0.1f;
-
-	// 課題02_08
-	// ----------------------------------------------------
-	Vector3 rotate1{0.0f, 0.0f, 0.0f};
-	Vector3 rotate2{-0.05f, -2.49f, 0.15f};
-	OBB obb1{
-	    .center = {0.0f,               0.0f,               0.0f              },
-          .orientations = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-          .size = {0.83f,              0.26f,              0.24f             }
-    };
-	OBB obb2{
-	    .center = {0.9f,               0.66f,              0.78f             },
-          .orientations = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-          .size = {0.5f,               0.37f,              0.5f              }
-    };
+	float halfpi = std::numbers::pi_v<float> / 2.0f;
+	Spherical s{6.0f, 0.0f, -halfpi};
+	Vector3 target{};
+	const Vector3 worldUp{0.0f, 1.0f, 0.0f};
+	const float limit = halfpi - 0.01f;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -64,51 +70,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓更新処理ここから
 		///
 
-		{ // カメラ操作
-			prevMouseX = mouseX;
-			prevMouseY = mouseY;
-			Novice::GetMousePosition(&mouseX, &mouseY);
+		s.radius = std::max<float>(s.radius, 0.1f);
+		s.theta = std::clamp(s.theta, -limit, limit);
 
-			if (Novice::IsPressMouse(1)) {
-				int dx = mouseX - prevMouseX;
-				int dy = mouseY - prevMouseY;
+		Vector3 eye = target + ToCartesian(s);
 
-				cameraRotate.y += dx * kRotateSpeed;
-				cameraRotate.x += dy * kRotateSpeed;
-			}
-
-			Vector3 forward{sinf(cameraRotate.y), 0, cosf(cameraRotate.y)};
-			Vector3 right{forward.z, 0, -forward.x};
-
-			if (keys[DIK_W]) {
-				cameraTranslate = cameraTranslate + forward * kMoveSpeed;
-			}
-			if (keys[DIK_S]) {
-				cameraTranslate = cameraTranslate - forward * kMoveSpeed;
-			}
-			if (keys[DIK_A]) {
-				cameraTranslate = cameraTranslate - right * kMoveSpeed;
-			}
-			if (keys[DIK_D]) {
-				cameraTranslate = cameraTranslate + right * kMoveSpeed;
-			}
-			if (keys[DIK_Q]) {
-				cameraTranslate.y += kMoveSpeed;
-			}
-			if (keys[DIK_E]) {
-				cameraTranslate.y -= kMoveSpeed;
-			}
-		}
-
-		obb1.UpdateOBBOrientations(rotate1);
-		obb2.UpdateOBBOrientations(rotate2);
+		Vector3 forward = Normalize(target, eye);
+		Vector3 right = Normalize(Cross(worldUp, forward));
+		Vector3 up = Cross(forward, right);
+		const Vector3 orientations[3] = {right, up, forward};
 
 		// 各種行列の計算
-		Matrix4x4 cameraMatrix = Matrix4x4::MakeAffineMatrix({1.0f, 1.0f, 1.0f}, cameraRotate, cameraTranslate);
-		Matrix4x4 viewMatrix = Matrix4x4::Inverse(cameraMatrix);
-		Matrix4x4 projectionMatrix = Matrix4x4::MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
+		Matrix4x4 cameraMatrix = MakeAffineMatrixOrientations(orientations, eye);
+		Matrix4x4 viewMatrix = Inverse(cameraMatrix);
+		Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
 		Matrix4x4 viewProjectionMatrix = viewMatrix * projectionMatrix;
-		Matrix4x4 viewportMatrix = Matrix4x4::MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
+		Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
 		///
 		/// ↑更新処理ここまで
@@ -120,13 +97,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
 
-		if (IsCollision(obb1, obb2)) {
-			DrawOBB(obb1, viewProjectionMatrix, viewportMatrix, RED);
-		} else {
-			DrawOBB(obb1, viewProjectionMatrix, viewportMatrix, WHITE);
-		}
-		DrawOBB(obb2, viewProjectionMatrix, viewportMatrix, WHITE);
-
 		///
 		/// ↑描画処理ここまで
 		///
@@ -137,26 +107,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 #ifdef _DEBUG
 
-		ImGui::Begin("Window");
+		ImGui::Begin("Spherical Coordinates");
 
-		ImGui::DragFloat3("obb1.center", &obb1.center.x, 0.01f);
-		ImGui::DragFloat3("obb1.rotate", &rotate1.x, 0.01f);
-		ImGui::DragFloat3("obb1.orientations[0]", &obb1.orientations[0].x, 0.01f);
-		ImGui::DragFloat3("obb1.orientations[1]", &obb1.orientations[1].x, 0.01f);
-		ImGui::DragFloat3("obb1.orientations[2]", &obb1.orientations[2].x, 0.01f);
-		ImGui::DragFloat3("obb1.size", &obb1.size.x, 0.01f);
+		ImGui::Text("Target: (0, 0, 0) / +Y up / Camera +Z forward");
+		ImGui::Separator();
 
-		ImGui::DragFloat3("obb2.center", &obb2.center.x, 0.01f);
-		ImGui::DragFloat3("obb2.rotate", &rotate2.x, 0.01f);
-		ImGui::DragFloat3("obb2.orientations[0]", &obb2.orientations[0].x, 0.01f);
-		ImGui::DragFloat3("obb2.orientations[1]", &obb2.orientations[1].x, 0.01f);
-		ImGui::DragFloat3("obb2.orientations[2]", &obb2.orientations[2].x, 0.01f);
-		ImGui::DragFloat3("obb2.size", &obb2.size.x, 0.01f);
+		ImGui::InputFloat("Radius", &s.radius, 0.1f, 1.0f, "%.3f");
+		ImGui::InputFloat("Theta: elevation (rad)", &s.theta, 0.01f, 0.1f, "%.3f");
+		ImGui::InputFloat("Phi (rad)", &s.phi, 0.01f, 0.1f, "%.3f");
+		ImGui::Separator();
+
+		ImGui::Text("Spherical: r = %.3f, theta = %.3f rad, phi = %.3f rad", s.radius, s.theta, s.phi);
+		ImGui::Text("Cartesian: x = %.3f, y = %.3f, z = %.3f", eye.x, eye.y, eye.z);
+		ImGui::Separator();
+
+		ImGui::Text("Camera matrix");
+		for (int row = 0; row < 4; ++row) {
+			ImGui::Text("%10.3f %10.3f %10.3f %10.3f", cameraMatrix.m[row][0], cameraMatrix.m[row][1], cameraMatrix.m[row][2], cameraMatrix.m[row][3]);
+		}
 
 		ImGui::End();
-
-		Novice::ScreenPrintf(10, 10, "Mouse Right Drag : Camera Rotate");
-		Novice::ScreenPrintf(10, 30, "WASDQE : MoveCamera");
 
 #endif // _DEBUG
 
