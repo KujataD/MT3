@@ -24,10 +24,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	char keys[256] = {0};
 	char preKeys[256] = {0};
 
-	// カメラ
+	// MT4_00_02
 	// ----------------------------------------------------
-	Vector3 cameraTranslate{0.0f, 2.0f, -6.49f};
-	Vector3 cameraRotate{0.21f, 0.0f, 0.0f};
+	const float deltaTime = 1.0f / 60.0f;
+
+	const float playerRadius = 12.0f;
+	Vector3 player{};
+
+	const float followerRadius = 20.0f;
+	Vector3 follower{640.0f, 360.0f, 0.0f};
+
+	float speed = 3.0f;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -42,12 +49,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓更新処理ここから
 		///
 
-		// 各種行列の計算
-		Matrix4x4 cameraMatrix = MakeAffineMatrix({1.0f, 1.0f, 1.0f}, cameraRotate, cameraTranslate);
-		Matrix4x4 viewMatrix = Inverse(cameraMatrix);
-		Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
-		Matrix4x4 viewProjectionMatrix = viewMatrix * projectionMatrix;
-		Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
+		int mouseX = 0;
+		int mouseY = 0;
+		Novice::GetMousePosition(&mouseX, &mouseY);
+		player = {static_cast<float>(mouseX), static_cast<float>(mouseY), 0.0f};
+
+		follower += (player - follower) * (speed * deltaTime);
 
 		///
 		/// ↑更新処理ここまで
@@ -57,7 +64,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
-		DrawGrid(viewProjectionMatrix, viewportMatrix);
+		Novice::DrawLine(static_cast<int>(follower.x), static_cast<int>(follower.y), static_cast<int>(player.x), static_cast<int>(player.y), WHITE);
+		Novice::DrawEllipse(static_cast<int>(player.x), static_cast<int>(player.y), static_cast<int>(playerRadius), static_cast<int>(playerRadius), 0.0f, RED, kFillModeSolid);
+		Novice::DrawEllipse(static_cast<int>(follower.x), static_cast<int>(follower.y), static_cast<int>(followerRadius), static_cast<int>(followerRadius), 0.0f, GREEN, kFillModeSolid);
 
 		///
 		/// ↑描画処理ここまで
@@ -68,6 +77,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 #ifdef _DEBUG
+
+		ImGui::Begin("Interpolation Controller");
+
+		ImGui::Text("Target: Mouse Position (Red Circle)");
+		ImGui::Separator();
+		ImGui::SliderFloat("Speed", &speed, 0.0f, 20.0f, "%.1f");
+		ImGui::Text("Mouse Pos: (%.1f, %.1f)", player.x, player.y);
+		ImGui::Text("Circle Pos: (%.1f, %.1f)", follower.x, follower.y);
+		ImGui::Text("Distance to target: %.1f px", Length(player - follower));
+
+		ImGui::End();
 
 #endif // _DEBUG
 
