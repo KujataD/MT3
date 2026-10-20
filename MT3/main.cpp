@@ -4,6 +4,8 @@
 #include "Draw.h"
 #include "GeometryTypes.h"
 #include "Matrix4x4.h"
+#include "Quaternion.h"
+#include "ScreenPrint.h"
 #include "Vector3.h"
 #include <cmath>
 #include <imgui.h>
@@ -24,17 +26,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	char keys[256] = {0};
 	char preKeys[256] = {0};
 
-	// MT4_00_02
+	// Quaternion
 	// ----------------------------------------------------
-	const float deltaTime = 1.0f / 60.0f;
+	Quaternion q1 = {2.0f, 3.0f, 4.0f, 1.0f};
+	Quaternion q2 = {1.0f, 3.0f, 5.0f, 2.0f};
+	Quaternion identity = IdentityQuaternion();
+	Quaternion conj = Conjugate(q1);
+	Quaternion inv = Inverse(q1);
+	Quaternion normal = Normalize(q1);
+	Quaternion mul1 = Multiply(q1, q2);
+	Quaternion mul2 = Multiply(q2, q1);
+	float norm = Norm(q1);
 
-	const float playerRadius = 12.0f;
-	Vector3 player{};
-
-	const float followerRadius = 20.0f;
-	Vector3 follower{640.0f, 360.0f, 0.0f};
-
-	float speed = 3.0f;
+	const int kRowHeight = 20;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -49,13 +53,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓更新処理ここから
 		///
 
-		int mouseX = 0;
-		int mouseY = 0;
-		Novice::GetMousePosition(&mouseX, &mouseY);
-		player = {static_cast<float>(mouseX), static_cast<float>(mouseY), 0.0f};
-
-		follower += (player - follower) * (speed * deltaTime);
-
 		///
 		/// ↑更新処理ここまで
 		///
@@ -64,9 +61,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
-		Novice::DrawLine(static_cast<int>(follower.x), static_cast<int>(follower.y), static_cast<int>(player.x), static_cast<int>(player.y), WHITE);
-		Novice::DrawEllipse(static_cast<int>(player.x), static_cast<int>(player.y), static_cast<int>(playerRadius), static_cast<int>(playerRadius), 0.0f, RED, kFillModeSolid);
-		Novice::DrawEllipse(static_cast<int>(follower.x), static_cast<int>(follower.y), static_cast<int>(followerRadius), static_cast<int>(followerRadius), 0.0f, GREEN, kFillModeSolid);
+		QuaternionScreenPrintf(0, kRowHeight * 0, identity, "   : Identity");
+		QuaternionScreenPrintf(0, kRowHeight * 1, conj, "   : Conjugate");
+		QuaternionScreenPrintf(0, kRowHeight * 2, inv, "   : Inverse");
+		QuaternionScreenPrintf(0, kRowHeight * 3, normal, "   : Normalize");
+		QuaternionScreenPrintf(0, kRowHeight * 4, mul1, "   : Multiply(q1, q2)");
+		QuaternionScreenPrintf(0, kRowHeight * 5, mul2, "   : Multiply(q2, q1)");
+		ScalarScreenPrintf(0, kRowHeight * 6, norm, "   : Norm");
 
 		///
 		/// ↑描画処理ここまで
@@ -77,17 +78,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 #ifdef _DEBUG
-
-		ImGui::Begin("Interpolation Controller");
-
-		ImGui::Text("Target: Mouse Position (Red Circle)");
-		ImGui::Separator();
-		ImGui::SliderFloat("Speed", &speed, 0.0f, 20.0f, "%.1f");
-		ImGui::Text("Mouse Pos: (%.1f, %.1f)", player.x, player.y);
-		ImGui::Text("Circle Pos: (%.1f, %.1f)", follower.x, follower.y);
-		ImGui::Text("Distance to target: %.1f px", Length(player - follower));
-
-		ImGui::End();
 
 #endif // _DEBUG
 

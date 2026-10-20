@@ -58,6 +58,9 @@
     <ClCompile Include="Spherical.cpp">
       <Filter>Geometry</Filter>
     </ClCompile>
+    <ClCompile Include="Quaternion.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="C:\KamataEngine\DirectXGame\audio\Audio.h">
@@ -167,6 +170,9 @@
     </ClInclude>
     <ClInclude Include="Spherical.h">
       <Filter>Geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="Quaternion.h">
+      <Filter>Math</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
