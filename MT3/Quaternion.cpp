@@ -29,3 +29,27 @@ Quaternion Inverse(const Quaternion& quaternion) {
 	const float normSquared = norm * norm;
 	return {conjugate.x / normSquared, conjugate.y / normSquared, conjugate.z / normSquared, conjugate.w / normSquared};
 }
+
+Quaternion MakeRotateAxisAngleQuaternion(const Vector3& axis, float angle) {
+	const float halfAngle = angle / 2.0f;
+	const float sinHalf = std::sin(halfAngle);
+	return {axis.x * sinHalf, axis.y * sinHalf, axis.z * sinHalf, std::cos(halfAngle)};
+}
+
+Vector3 RotateVector(const Vector3& vector, const Quaternion& quaternion) {
+	const Quaternion rotated = Multiply(Multiply(quaternion, {vector.x, vector.y, vector.z, 0.0f}), Conjugate(quaternion));
+	return {rotated.x, rotated.y, rotated.z};
+}
+
+Matrix4x4 MakeRotateMatrix(const Quaternion& quaternion) {
+	const float x = quaternion.x;
+	const float y = quaternion.y;
+	const float z = quaternion.z;
+	const float w = quaternion.w;
+	return {
+	    {{w * w + x * x - y * y - z * z, 2.0f * (x * y + w * z), 2.0f * (x * z - w * y), 0.0f},
+	     {2.0f * (x * y - w * z), w * w - x * x + y * y - z * z, 2.0f * (y * z + w * x), 0.0f},
+	     {2.0f * (x * z + w * y), 2.0f * (y * z - w * x), w * w - x * x - y * y + z * z, 0.0f},
+	     {0.0f, 0.0f, 0.0f, 1.0f}}
+    };
+}
